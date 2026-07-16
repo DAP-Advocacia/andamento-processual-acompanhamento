@@ -1,0 +1,45 @@
+.tabela {
+  overflow-x: auto;
+  padding: 4px;
+}
+
+/* Cabeçalho e rows compartilham o mesmo grid para as colunas alinharem. */
+.cabecalho,
+.row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2.4fr) minmax(0, 1.2fr) 96px minmax(0, 1.3fr)
+    minmax(0, 1.3fr) 168px;
+  gap: var(--mantine-spacing-md);
+  align-items: center;
+  min-width: 720px;
+}
+
+.cabecalho {
+  padding: 0 12px 6px;
+}
+
+.rotuloCabecalho {
+  color: var(--mantine-color-gray-4);
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Rows brancas de linha única, com letras pretas, sobre o fundo azul-marinho. */
+.row {
+  background-color: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-md);
+  padding: 11px 12px;
+  color: var(--mantine-color-black);
+}
+
+.row:hover {
+  background-color: var(--mantine-color-gray-2);
+}
+
+.celula {
+  color: var(--mantine-color-black);
+  font-size: var(--mantine-font-size-sm);
+}

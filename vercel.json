@@ -1,0 +1,7 @@
+{
+  "routes": [
+    { "src": "/.*", "methods": ["POST"], "dest": "/api/index" },
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
+}

@@ -1,0 +1,49 @@
+/* Fundo azul-marinho em toda a página; textos auxiliares e controles do tema
+   claro do Mantine precisam clarear para manter contraste sobre ele. */
+.page {
+  position: relative;
+  min-height: 100dvh;
+  background-color: var(--cor-azul-fundo);
+  --mantine-color-dimmed: var(--mantine-color-gray-4);
+}
+
+/* Plasma decorativo atrás do conteúdo, fixo à viewport. O blur esconde a
+   resolução reduzida em que o shader renderiza (ver ESCALA_RENDER em Plasma.tsx);
+   o inset negativo joga as bordas esmaecidas do blur para fora da tela. */
+.plasmaFundo {
+  position: fixed;
+  inset: -8px;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(3px);
+}
+
+.page > :not(.plasmaFundo) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Conteúdo centralizado em 70% da largura (15% de margem de cada lado). */
+.conteudo {
+  width: 70%;
+  margin-inline: auto;
+  padding-block: var(--mantine-spacing-xl);
+}
+
+@media (max-width: 62em) {
+  .conteudo {
+    width: 92%;
+  }
+}
+
+.page :global(.mantine-Title-root) {
+  color: var(--mantine-color-white);
+}
+
+.page :global(.mantine-InputWrapper-label) {
+  color: var(--mantine-color-white);
+}
+
+/* Controles não-ativos usam o padrão do Mantine (fundo branco, texto escuro) —
+   deixar essa combinação intacta é o que garante contraste; forçar texto
+   branco aqui deixava os ícones de seta invisíveis sobre o fundo branco. */

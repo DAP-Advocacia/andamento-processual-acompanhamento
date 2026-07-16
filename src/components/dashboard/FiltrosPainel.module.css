@@ -1,0 +1,40 @@
+/* Inputs "de vidro" sobre o azul-marinho da página, no mesmo translúcido dos
+   controles de navegação das métricas (MetricasCards.module.css). Fundo e texto
+   mudam JUNTOS — texto claro só é legível porque o fundo deixou de ser o branco
+   padrão do Mantine (ver aviso em DashboardPage.module.css sobre forçar cor de
+   texto sem trocar o fundo). */
+.input {
+  background-color: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.25);
+  color: var(--mantine-color-white);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.input:hover {
+  background-color: rgb(255 255 255 / 0.18);
+}
+
+.input:focus,
+.input:focus-within,
+.input[data-expanded] {
+  border-color: var(--mantine-color-dourado-4);
+  background-color: rgb(255 255 255 / 0.18);
+}
+
+/* Cobre o ::placeholder dos inputs de texto e o Input.Placeholder renderizado
+   pelo Select/DatePickerInput quando estão vazios. */
+.input::placeholder,
+.input :global(.mantine-InputPlaceholder-placeholder) {
+  color: var(--mantine-color-gray-4);
+}
+
+.label {
+  margin-bottom: 5px;
+}
+
+/* Ícones da seção direita (chevron do Select, botão de limpar) sobre o vidro. */
+.secao {
+  color: var(--mantine-color-gray-3);
+}

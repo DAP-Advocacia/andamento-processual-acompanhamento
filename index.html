@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Andamento Processual</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- SDK do Bitrix24: injeta window.BX24 quando o app roda embutido como widget.
+         Fora do Bitrix (ex.: npm run dev isolado), o script falha em carregar e
+         window.BX24 permanece undefined — src/services/bitrixSdk.ts trata isso. -->
+    <script src="https://api.bitrix24.com/api/v1/"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+:root {
+  color-scheme: light dark;
+  /* Azul-marinho de fundo geral do app (amostra de cor enviada pelo usuário). */
+  --cor-azul-fundo: #0d1b3a;
+}
+
+body {
+  margin: 0;
+  background-color: var(--cor-azul-fundo);
+}

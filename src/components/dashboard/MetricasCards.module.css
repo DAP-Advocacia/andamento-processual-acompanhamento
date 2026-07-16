@@ -1,0 +1,152 @@
+/* Layout do "Grouped stats" do Mantine UI: card único com estatísticas lado a
+   lado, fundo branco sobre o azul-marinho da página. */
+.root {
+  display: flex;
+  background-color: var(--mantine-color-white);
+  padding: calc(var(--mantine-spacing-xl) * 1.5);
+  border-radius: var(--mantine-radius-md);
+  overflow: hidden;
+}
+
+/* Envolve o card e ancora os chevrons de navegação nas margens laterais. */
+.carrossel {
+  position: relative;
+}
+
+/* Réplica do Pagination.Control do Mantine, para os chevrons de navegação entre
+   grupos de métricas terem exatamente o mesmo visual. Ficam verticalmente
+   centralizados nas margens laterais do card, estilo carrossel. */
+.navControl {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: calc(0.0625rem * var(--mantine-scale)) solid transparent;
+  cursor: pointer;
+  color: var(--mantine-color-white);
+  height: var(--pagination-control-size, 2rem);
+  min-width: var(--pagination-control-size, 2rem);
+  font-size: var(--pagination-control-fz, var(--mantine-font-size-md));
+  line-height: 1;
+  border-radius: var(--mantine-radius-default);
+  background-color: rgb(255 255 255 / 0.12);
+}
+
+.navControl:hover {
+  background-color: rgb(255 255 255 / 0.22);
+}
+
+.navAnterior {
+  left: -3rem;
+}
+
+.navProximo {
+  right: -3rem;
+}
+
+/* Botão circular de sincronização com o Bitrix. */
+.syncControl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: calc(0.0625rem * var(--mantine-scale)) solid transparent;
+  cursor: pointer;
+  color: var(--mantine-color-white);
+  height: var(--pagination-control-size, 2rem);
+  width: var(--pagination-control-size, 2rem);
+  border-radius: 50%;
+  background-color: rgb(255 255 255 / 0.12);
+}
+
+.syncControl:hover {
+  background-color: rgb(255 255 255 / 0.22);
+}
+
+.syncControl:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.syncGirando {
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.stat {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat + .stat {
+  padding-left: var(--mantine-spacing-xl);
+  margin-left: var(--mantine-spacing-xl);
+  border-left: 1px solid var(--mantine-color-gray-3);
+}
+
+.count {
+  color: var(--mantine-color-black);
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.title {
+  color: var(--mantine-color-black);
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: var(--mantine-font-size-sm);
+  margin-top: var(--mantine-spacing-md);
+}
+
+.description {
+  color: var(--mantine-color-gray-6);
+  font-size: var(--mantine-font-size-sm);
+  margin-top: 5px;
+}
+
+/* Em telas estreitas a página não tem margem lateral suficiente (ver
+   DashboardPage.module.css): os chevrons entram por cima do card branco e
+   escurecem para manter contraste. */
+@media (max-width: 62em) {
+  .navControl {
+    color: var(--mantine-color-dark-6);
+    background-color: rgb(0 0 0 / 0.08);
+  }
+
+  .navControl:hover {
+    background-color: rgb(0 0 0 / 0.16);
+  }
+
+  .navAnterior {
+    left: 0.5rem;
+  }
+
+  .navProximo {
+    right: 0.5rem;
+  }
+}
+
+@media (max-width: 48em) {
+  .root {
+    flex-direction: column;
+  }
+
+  .stat + .stat {
+    padding-left: 0;
+    margin-left: 0;
+    border-left: 0;
+    padding-top: var(--mantine-spacing-xl);
+    margin-top: var(--mantine-spacing-xl);
+    border-top: 1px solid var(--mantine-color-gray-3);
+  }
+}
