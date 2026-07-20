@@ -136,35 +136,37 @@ export function DashboardPage() {
         <Stack gap="xl">
           {colaborador && <Title order={2}>Olá, {colaborador.nome}</Title>}
 
-          <MetricasCards
-            titulo="Métricas"
-            metricas={metricas}
-            metricasPorSetor={metricasPorSetor}
-            aoSincronizar={aoSincronizar}
-            sincronizando={sincronizando}
-          />
+          {erroDados ? (
+            <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
+          ) : (
+            <>
+              <MetricasCards
+                titulo="Métricas"
+                metricas={metricas}
+                metricasPorSetor={metricasPorSetor}
+                aoSincronizar={aoSincronizar}
+                sincronizando={sincronizando}
+              />
 
-          <FiltrosPainel
-            filtros={filtros}
-            onChange={aoMudarFiltros}
-            projetosPermitidos={projetosPermitidos}
-          />
+              <FiltrosPainel
+                filtros={filtros}
+                onChange={aoMudarFiltros}
+                projetosPermitidos={projetosPermitidos}
+              />
 
-          <div>
-            <Title order={3} mb="md">
-              Inteligência — visão por equipe
-            </Title>
-            {erroDados ? (
-              <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
-            ) : (
-              <Stack gap="md">
-                {equipesResolvidas.length > 0 && (
-                  <EquipesResolvidas equipes={equipesResolvidas} fonte={fonteAtiva()} />
-                )}
-                {pacotes && <GraficosInteligencia pacotes={pacotes} />}
-              </Stack>
-            )}
-          </div>
+              <div>
+                <Title order={3} mb="md">
+                  Inteligência — visão por equipe
+                </Title>
+                <Stack gap="md">
+                  {equipesResolvidas.length > 0 && (
+                    <EquipesResolvidas equipes={equipesResolvidas} fonte={fonteAtiva()} />
+                  )}
+                  {pacotes && <GraficosInteligencia pacotes={pacotes} />}
+                </Stack>
+              </div>
+            </>
+          )}
         </Stack>
       </div>
     )
