@@ -12,7 +12,14 @@ export function ThemeToggle() {
   const computado = useComputedColorScheme('light', { getInitialValueInEffect: true })
   const escuro = computado === 'dark'
 
-  const alternar = () => setColorScheme(escuro ? 'light' : 'dark')
+  const alternar = () => {
+    // Ativa o fade global (ver index.css) só durante a troca e remove ao fim,
+    // para o fade não interferir em load/hover/outras animações.
+    const raiz = document.documentElement
+    raiz.classList.add('theme-fade')
+    window.setTimeout(() => raiz.classList.remove('theme-fade'), 400)
+    setColorScheme(escuro ? 'light' : 'dark')
+  }
 
   return (
     <ActionIcon

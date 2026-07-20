@@ -41,26 +41,35 @@ body {
   color: var(--mantine-color-text);
 }
 
-/* Fade suave global na troca de tema. Escopado a cor/fundo/borda/sombra e a
-   um cubic-bezier curto, para todos os elementos (Mantine e nossos) animarem
-   juntos quando o color-scheme muda no <html>. Fill/stroke cobre os SVGs.
-   Não incluímos transform, então o ripple e o spinner (que animam transform)
-   não são afetados. */
-:root,
-:root *:not(svg):not(path) {
+/* Fade suave global na troca de tema.
+ *
+ * O fade é ativado por uma classe temporária (theme-fade) que o ThemeToggle
+ * põe no <html> só durante a troca, e remove ao terminar. Isso resolve dois
+ * problemas de uma vez:
+ *   1. Nada de transição no load inicial nem em hovers/foco — o fade só existe
+ *      no momento do clique, então não interfere em nenhuma outra animação.
+ *   2. Cobrimos TODOS os elementos (incl. ::before/::after) com !important só
+ *      nesse instante, garantindo que superfícies do Mantine que definem a
+ *      própria `transition` também participem do fade.
+ * Excluímos transform/opacity, então ripple e spinner não são afetados. */
+:root.theme-fade,
+:root.theme-fade *,
+:root.theme-fade *::before,
+:root.theme-fade *::after {
   transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease,
-    color 0.3s ease,
-    fill 0.3s ease,
-    stroke 0.3s ease,
-    box-shadow 0.3s ease;
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.35s ease,
+    fill 0.35s ease,
+    stroke 0.35s ease,
+    box-shadow 0.35s ease !important;
 }
 
-/* Respeita quem pediu menos movimento: sem fade de tema. */
 @media (prefers-reduced-motion: reduce) {
-  :root,
-  :root *:not(svg):not(path) {
-    transition: none;
+  :root.theme-fade,
+  :root.theme-fade *,
+  :root.theme-fade *::before,
+  :root.theme-fade *::after {
+    transition: none !important;
   }
 }
