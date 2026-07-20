@@ -14,6 +14,15 @@ export const STATUS_LABELS: Record<StatusTarefa, string> = {
 
 export const STATUS_CONCLUIDO: StatusTarefa = 5
 
+// PRIORITY em tasks.task.list vem como string numérica: '0' baixa, '1' normal, '2' alta.
+export type PrioridadeTarefa = '0' | '1' | '2'
+
+export const PRIORIDADE_LABELS: Record<PrioridadeTarefa, string> = {
+  '0': 'Baixa',
+  '1': 'Normal',
+  '2': 'Alta',
+}
+
 /** Não há mais banco local — o id de cada entidade é o próprio id no Bitrix24. */
 export interface Departamento {
   id: number
@@ -43,6 +52,97 @@ export interface Tarefa {
   fechadoPorNome: string | null
   /** Um colaborador pode pertencer a mais de um departamento (N:N). */
   fechadoPorDepartamentos: string[]
+  /** Responsável atual pela tarefa (RESPONSIBLE_ID), distinto de quem a fechou. */
+  responsavelId: number | null
+  responsavelNome: string | null
+  prioridade: PrioridadeTarefa
+  /**
+   * Responsável pelo atendimento do cliente — vem do campo customizado
+   * UF_CRM_20_1780943729 do card, distinto do responsável nativo da tarefa.
+   * É o critério de agrupamento da tela de inteligência.
+   */
+  responsavelAtendimentoId: number | null
+  responsavelAtendimentoNome: string | null
+  /** Equipe (departamento) do responsável pelo atendimento, ou "indefinido". */
+  equipeAtendimento: EquipeAtendimento
+}
+
+/**
+ * Equipes de atendimento reconhecidas — cada uma é o nome de um departamento no
+ * Bitrix24. Um responsável cujo departamento não bate com nenhuma cai em
+ * "indefinido".
+ */
+export const EQUIPES_ATENDIMENTO = [
+  'Cinthia Filgueiras',
+  'Simone Freitas',
+  'Quézia Karen',
+  'Lorena Pontes',
+] as const
+
+export type EquipeAtendimento = (typeof EQUIPES_ATENDIMENTO)[number] | 'indefinido'
+
+/**
+ * "Pacote" da tela de inteligência: todos os cards atribuídos a um mesmo
+ * responsável pelo atendimento, já classificados na equipe dele.
+ */
+export interface PacoteAtendimento {
+  responsavelAtendimentoId: number | null
+  responsavelAtendimentoNome: string
+  equipe: EquipeAtendimento
+  cards: Tarefa[]
+}
+
+/** Contagem de cards por situação de prazo, base dos gráficos empilhados. */
+export interface ContagemSituacao {
+  total: number
+  noPrazo: number
+  atrasadas: number
+  concluidas: number
+  adiadas: number
+}
+
+/** Métricas de uma equipe para os gráficos de inteligência. */
+export interface InteligenciaEquipe {
+  equipe: EquipeAtendimento
+  contagem: ContagemSituacao
+  responsaveis: number
+}
+
+/** Volume de cards de um responsável (para o ranking por responsável). */
+export interface VolumeResponsavel {
+  responsavelAtendimentoId: number | null
+  nome: string
+  equipe: EquipeAtendimento
+  total: number
+}
+
+/** Volume de cards por "fechado por" (campo customizado), para o gráfico próprio. */
+export interface VolumeFechadoPor {
+  fechadoPorId: number | null
+  nome: string
+  total: number
+}
+
+/**
+ * Modelo de dados consolidado que alimenta os gráficos da tela de inteligência.
+ * Derivado dos pacotes já filtrados — recalculado a cada mudança de filtro.
+ */
+export interface InteligenciaDados {
+  porEquipe: InteligenciaEquipe[]
+  topResponsaveis: VolumeResponsavel[]
+  topFechadoPor: VolumeFechadoPor[]
+  totalCards: number
+}
+
+/**
+ * Resultado da validação dos nomes informados contra os departamentos do Bitrix
+ * — o que a api_url busca para "trackear a modelagem de dados". Cada equipe pode
+ * ou não existir como departamento na fonte real.
+ */
+export interface EquipeResolvida {
+  nome: EquipeAtendimento
+  departamentoId: number | null
+  encontrada: boolean
 }
 
 export interface SessaoUsuario {
@@ -63,6 +163,8 @@ export interface FiltrosDashboard {
   setor: string | null
   projetoId: number | null
   fechadoPorId: number | null
+  responsavelId: number | null
+  prioridade: PrioridadeTarefa | null
 }
 
 export const FILTROS_VAZIOS: FiltrosDashboard = {
@@ -72,6 +174,8 @@ export const FILTROS_VAZIOS: FiltrosDashboard = {
   setor: null,
   projetoId: null,
   fechadoPorId: null,
+  responsavelId: null,
+  prioridade: null,
 }
 
 export interface MetricasTarefas {

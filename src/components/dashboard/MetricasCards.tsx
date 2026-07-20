@@ -66,8 +66,8 @@ export function MetricasCards({
 
   return (
     <div>
-      <Group justify="center" mb="xs" pos="relative">
-        <Text fw={600} c="white" pos="absolute" left={0}>
+      <Group justify="space-between" mb="xs">
+        <Text fw={600} c="white">
           {tituloGrupo}
         </Text>
 

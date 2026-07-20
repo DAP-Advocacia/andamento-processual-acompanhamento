@@ -1,7 +1,7 @@
 import { Badge, Divider, Group, Modal, SimpleGrid, Stack, Text } from '@mantine/core'
-import { STATUS_LABELS, type Tarefa } from '../../types/domain'
+import { PRIORIDADE_LABELS, STATUS_LABELS, type Tarefa } from '../../types/domain'
 import { tarefaEstaAtrasada, tarefaEstaConcluida } from '../../utils/tarefasMetrics'
-import { corDoStatus, formatarData, formatarDataHora } from './tarefaApresentacao'
+import { corDaPrioridade, corDoStatus, formatarData, formatarDataHora } from './tarefaApresentacao'
 
 interface TarefaDetalheModalProps {
   tarefa: Tarefa | null
@@ -57,9 +57,14 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
             <Text fw={700} size="lg">
               {tarefa.titulo}
             </Text>
-            <Badge color={corDoStatus(tarefa)} variant="light">
-              {STATUS_LABELS[tarefa.status]}
-            </Badge>
+            <Group gap="xs" wrap="nowrap">
+              <Badge color={corDaPrioridade(tarefa.prioridade)} variant="filled">
+                {PRIORIDADE_LABELS[tarefa.prioridade]}
+              </Badge>
+              <Badge color={corDoStatus(tarefa)} variant="light">
+                {STATUS_LABELS[tarefa.status]}
+              </Badge>
+            </Group>
           </Group>
 
           <Text size="sm" fw={600}>
@@ -71,8 +76,14 @@ export function TarefaDetalheModal({ tarefa, aoFechar }: TarefaDetalheModalProps
           <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <Campo rotulo="Projeto" valor={tarefa.projetoNome ?? '—'} />
             <Campo rotulo="Prazo final" valor={formatarData(tarefa.prazoFinal)} />
-            <Campo rotulo="Finalizado em" valor={formatarDataHora(tarefa.finalizadoEm)} />
+            <Campo
+              rotulo="Resp. pelo atendimento"
+              valor={tarefa.responsavelAtendimentoNome ?? '—'}
+            />
+            <Campo rotulo="Equipe de atendimento" valor={tarefa.equipeAtendimento} />
+            <Campo rotulo="Responsável" valor={tarefa.responsavelNome ?? '—'} />
             <Campo rotulo="Fechado por" valor={tarefa.fechadoPorNome ?? '—'} />
+            <Campo rotulo="Finalizado em" valor={formatarDataHora(tarefa.finalizadoEm)} />
             <Campo rotulo="Setor(es)" valor={tarefa.fechadoPorDepartamentos.join(', ') || '—'} />
             <Campo rotulo="ID no Bitrix" valor={String(tarefa.id)} />
           </SimpleGrid>

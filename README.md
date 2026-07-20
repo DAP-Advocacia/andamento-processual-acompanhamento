@@ -12,9 +12,10 @@ npm install
 npm run dev
 ```
 
-Fora do iframe do Bitrix o `window.BX24` não existe e o app roda automaticamente
-com dados fictícios (`src/services/mock/fixtures.ts`), simulando o usuário
-Ana Souza (id 101).
+Os dados vêm sempre ao vivo do Bitrix (não há mais mock). Embutido no Bitrix o
+app usa o `window.BX24`; fora do iframe, defina `VITE_BITRIX_API_URL` (webhook
+REST de entrada) no `.env` para o app buscar os dados via `fetch`. Sem nenhuma
+das duas fontes, a tela mostra um estado de erro pedindo a configuração.
 
 Outros comandos: `npm run build` (typecheck + build), `npm run lint`,
 `npm run format`.

@@ -1,13 +1,15 @@
 import type { Bitrix24Result } from '../types/bitrix'
+import { webhookDisponivel } from './bitrixRest'
+import {
+  finalizarChamada,
+  registrarChamada,
+  registrarPagina,
+} from './debugBitrix'
 
 export interface UsuarioBitrixAtual {
   idBitrix: number
   nome: string
 }
-
-// Ana Souza (fixture) — usado só em `npm run dev` fora do iframe do Bitrix24,
-// onde window.BX24 não existe. Nunca ativo em build de produção.
-const DEV_ID_BITRIX_FALLBACK = 101
 
 const MAX_TENTATIVAS_RATE_LIMIT = 5
 
@@ -104,9 +106,13 @@ export async function callMethodTodasPaginas<T>(
 ): Promise<T[]> {
   await inicializarBx24()
 
+  const debugId = registrarChamada(method, params)
+
   const primeira = await buscarPrimeiraPagina<T>(method, params, extrairLista)
+  registrarPagina(debugId, null, primeira.itens, primeira.total)
   const acumulado = [...primeira.itens]
   if (primeira.completo) {
+    finalizarChamada(debugId, agoraIso())
     return acumulado
   }
 
@@ -129,14 +135,24 @@ export async function callMethodTodasPaginas<T>(
       if (erro) {
         // Sub-chamada falhou (ex.: rate limit no meio do lote): refaz só ela.
         const payload = await chamarComRetry<unknown>(method, { ...params, start: lote[j] })
-        acumulado.push(...extrairLista(payload))
+        const itens = extrairLista(payload)
+        registrarPagina(debugId, lote[j], itens)
+        acumulado.push(...itens)
       } else {
-        acumulado.push(...extrairLista(resultados[j].data()))
+        const itens = extrairLista(resultados[j].data())
+        registrarPagina(debugId, lote[j], itens)
+        acumulado.push(...itens)
       }
     }
   }
 
+  finalizarChamada(debugId, agoraIso())
   return acumulado
+}
+
+/** `new Date()` sem argumento isolado aqui para manter o resto puro/testável. */
+function agoraIso(): string {
+  return new Date().toISOString()
 }
 
 function buscarPrimeiraPagina<T>(
@@ -198,11 +214,15 @@ function buscarPrimeiraPagina<T>(
 
 export async function obterUsuarioBitrixAtual(): Promise<UsuarioBitrixAtual> {
   if (!bx24Disponivel()) {
-    if (import.meta.env.DEV) {
-      return { idBitrix: DEV_ID_BITRIX_FALLBACK, nome: '(dev) usuário simulado' }
+    // Fora do iframe do Bitrix não há "usuário atual". Se o webhook estiver
+    // configurado, seguimos com um usuário de serviço genérico (o acesso é
+    // resolvido pelos grupos monitorados fixos — ver acessoService). Só falha
+    // se também não houver webhook.
+    if (webhookDisponivel()) {
+      return { idBitrix: 0, nome: 'Painel de inteligência' }
     }
     throw new Error(
-      'SDK do Bitrix24 (BX24) não encontrado. Este aplicativo só funciona embutido no Bitrix24.',
+      'Fonte de dados do Bitrix não configurada. Rode embutido no Bitrix24 ou defina VITE_BITRIX_API_URL.',
     )
   }
 

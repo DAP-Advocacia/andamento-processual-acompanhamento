@@ -1,24 +1,27 @@
 import { Center, Loader, Stack, Title } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
-import { Plasma } from '../components/Plasma'
+import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
+import { EquipesResolvidas } from '../components/dashboard/EquipesResolvidas'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
+import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
-import { TarefasTable } from '../components/dashboard/TarefasTable'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
-  ITENS_POR_PAGINA,
   obterMetricasFiltradas,
   obterMetricasPorSetorFiltradas,
-  obterTarefasFiltradas,
+  obterPacotesAtendimento,
+  resolverEquipesInformadas,
   sincronizarComBitrix,
-  type ResultadoTarefasPaginado,
 } from '../services/dashboardService'
+import { fonteAtiva } from '../services/bitrixTransport'
 import {
   FILTROS_VAZIOS,
+  type EquipeResolvida,
   type FiltrosDashboard,
   type MetricasPorSetor,
   type MetricasTarefas,
+  type PacoteAtendimento,
 } from '../types/domain'
 import classes from './DashboardPage.module.css'
 
@@ -26,10 +29,11 @@ export function DashboardPage() {
   const { estado, colaborador, projetosPermitidos, mensagemErro } = useSessaoUsuario()
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(FILTROS_VAZIOS)
-  const [pagina, setPagina] = useState(1)
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorSetor, setMetricasPorSetor] = useState<MetricasPorSetor[]>([])
-  const [resultadoTarefas, setResultadoTarefas] = useState<ResultadoTarefasPaginado | null>(null)
+  const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
+  const [equipesResolvidas, setEquipesResolvidas] = useState<EquipeResolvida[]>([])
+  const [erroDados, setErroDados] = useState<string | null>(null)
   const [sincronizando, setSincronizando] = useState(false)
 
   useEffect(() => {
@@ -38,21 +42,43 @@ export function DashboardPage() {
     Promise.all([
       obterMetricasFiltradas(filtros, projetosPermitidos),
       obterMetricasPorSetorFiltradas(filtros, projetosPermitidos),
-      obterTarefasFiltradas(filtros, projetosPermitidos, pagina),
-    ]).then(([novasMetricas, novasMetricasPorSetor, resultado]) => {
-      if (cancelado) return
-      setMetricas(novasMetricas)
-      setMetricasPorSetor(novasMetricasPorSetor)
-      setResultadoTarefas(resultado)
-    })
+      obterPacotesAtendimento(filtros, projetosPermitidos),
+    ])
+      .then(([novasMetricas, novasMetricasPorSetor, novosPacotes]) => {
+        if (cancelado) return
+        setErroDados(null)
+        setMetricas(novasMetricas)
+        setMetricasPorSetor(novasMetricasPorSetor)
+        setPacotes(novosPacotes)
+      })
+      .catch((erro) => {
+        if (cancelado) return
+        setErroDados(erro instanceof Error ? erro.message : 'Erro ao carregar dados do Bitrix.')
+      })
     return () => {
       cancelado = true
     }
-  }, [estado, filtros, pagina, projetosPermitidos])
+  }, [estado, filtros, projetosPermitidos])
+
+  // Resolução das equipes informadas × departamentos do Bitrix: independe dos
+  // filtros, então carrega uma vez quando a sessão fica pronta.
+  useEffect(() => {
+    if (estado !== 'ok') return
+    let cancelado = false
+    resolverEquipesInformadas()
+      .then((resolvidas) => {
+        if (!cancelado) setEquipesResolvidas(resolvidas)
+      })
+      .catch(() => {
+        // Erro aqui não é fatal para os gráficos; o painel de equipes só não aparece.
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [estado])
 
   function aoMudarFiltros(novosFiltros: FiltrosDashboard) {
     setFiltros(novosFiltros)
-    setPagina(1)
   }
 
   async function aoSincronizar() {
@@ -60,14 +86,18 @@ export function DashboardPage() {
     setSincronizando(true)
     try {
       await sincronizarComBitrix(projetosPermitidos)
-      const [novasMetricas, novasMetricasPorSetor, resultado] = await Promise.all([
+      const [novasMetricas, novasMetricasPorSetor, novosPacotes] = await Promise.all([
         obterMetricasFiltradas(filtros, projetosPermitidos),
         obterMetricasPorSetorFiltradas(filtros, projetosPermitidos),
-        obterTarefasFiltradas(filtros, projetosPermitidos, pagina),
+        obterPacotesAtendimento(filtros, projetosPermitidos),
       ])
+      setErroDados(null)
       setMetricas(novasMetricas)
       setMetricasPorSetor(novasMetricasPorSetor)
-      setResultadoTarefas(resultado)
+      setPacotes(novosPacotes)
+      setEquipesResolvidas(await resolverEquipesInformadas())
+    } catch (erro) {
+      setErroDados(erro instanceof Error ? erro.message : 'Erro ao sincronizar com o Bitrix.')
     } finally {
       setSincronizando(false)
     }
@@ -105,12 +135,6 @@ export function DashboardPage() {
         <Stack gap="xl">
           {colaborador && <Title order={2}>Olá, {colaborador.nome}</Title>}
 
-          <FiltrosPainel
-            filtros={filtros}
-            onChange={aoMudarFiltros}
-            projetosPermitidos={projetosPermitidos}
-          />
-
           <MetricasCards
             titulo="Métricas"
             metricas={metricas}
@@ -119,15 +143,27 @@ export function DashboardPage() {
             sincronizando={sincronizando}
           />
 
-          {resultadoTarefas && (
-            <TarefasTable
-              tarefas={resultadoTarefas.tarefas}
-              totalRegistros={resultadoTarefas.totalRegistros}
-              pagina={pagina}
-              itensPorPagina={ITENS_POR_PAGINA}
-              onMudarPagina={setPagina}
-            />
-          )}
+          <FiltrosPainel
+            filtros={filtros}
+            onChange={aoMudarFiltros}
+            projetosPermitidos={projetosPermitidos}
+          />
+
+          <div>
+            <Title order={3} c="white" mb="md">
+              Inteligência — visão por equipe
+            </Title>
+            {erroDados ? (
+              <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
+            ) : (
+              <Stack gap="md">
+                {equipesResolvidas.length > 0 && (
+                  <EquipesResolvidas equipes={equipesResolvidas} fonte={fonteAtiva()} />
+                )}
+                {pacotes && <GraficosInteligencia pacotes={pacotes} />}
+              </Stack>
+            )}
+          </div>
         </Stack>
       </div>
     )
@@ -135,10 +171,8 @@ export function DashboardPage() {
 
   return (
     <div className={classes.page}>
-      <div className={classes.plasmaFundo}>
-        <Plasma color="#1a3a6b" speed={0.6} scale={1.2} opacity={0.5} mouseInteractive={false} />
-      </div>
       {conteudo}
+      <DebugBitrixPanel />
     </div>
   )
 }

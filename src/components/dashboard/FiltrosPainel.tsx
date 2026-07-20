@@ -3,9 +3,16 @@ import { DatePickerInput } from '@mantine/dates'
 import { useEffect, useState } from 'react'
 import {
   listarColaboradoresDisponiveis,
+  listarResponsaveisDisponiveis,
   listarSetoresDisponiveis,
 } from '../../services/dashboardService'
-import type { FiltroStatus, FiltrosDashboard, Projeto } from '../../types/domain'
+import {
+  PRIORIDADE_LABELS,
+  type FiltroStatus,
+  type FiltrosDashboard,
+  type PrioridadeTarefa,
+  type Projeto,
+} from '../../types/domain'
 import classes from './FiltrosPainel.module.css'
 
 const OPCOES_STATUS: Array<{ value: FiltroStatus; label: string }> = [
@@ -14,6 +21,7 @@ const OPCOES_STATUS: Array<{ value: FiltroStatus; label: string }> = [
   { value: 'atrasado', label: 'Atrasado' },
   { value: 'no_prazo', label: 'No prazo' },
 ]
+
 
 const CLASSES_INPUT = {
   input: classes.input,
@@ -32,12 +40,16 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
   const [colaboradoresDisponiveis, setColaboradoresDisponiveis] = useState<
     Array<{ id: number; nome: string }>
   >([])
-  const { dataInicio, dataFim, status, setor, projetoId, fechadoPorId } = filtros
+  const [responsaveisDisponiveis, setResponsaveisDisponiveis] = useState<
+    Array<{ id: number; nome: string }>
+  >([])
+  const { dataInicio, dataFim, status, setor, projetoId, fechadoPorId, responsavelId, prioridade } =
+    filtros
 
   useEffect(() => {
     let cancelado = false
     listarSetoresDisponiveis(
-      { dataInicio, dataFim, status, projetoId, fechadoPorId },
+      { dataInicio, dataFim, status, projetoId, fechadoPorId, responsavelId, prioridade },
       projetosPermitidos,
     ).then((setores) => {
       if (!cancelado) setSetoresDisponiveis(setores)
@@ -45,12 +57,12 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     return () => {
       cancelado = true
     }
-  }, [dataInicio, dataFim, status, projetoId, fechadoPorId, projetosPermitidos])
+  }, [dataInicio, dataFim, status, projetoId, fechadoPorId, responsavelId, prioridade, projetosPermitidos])
 
   useEffect(() => {
     let cancelado = false
     listarColaboradoresDisponiveis(
-      { dataInicio, dataFim, status, setor, projetoId },
+      { dataInicio, dataFim, status, setor, projetoId, responsavelId, prioridade },
       projetosPermitidos,
     ).then((colaboradores) => {
       if (!cancelado) setColaboradoresDisponiveis(colaboradores)
@@ -58,11 +70,24 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     return () => {
       cancelado = true
     }
-  }, [dataInicio, dataFim, status, setor, projetoId, projetosPermitidos])
+  }, [dataInicio, dataFim, status, setor, projetoId, responsavelId, prioridade, projetosPermitidos])
+
+  useEffect(() => {
+    let cancelado = false
+    listarResponsaveisDisponiveis(
+      { dataInicio, dataFim, status, setor, projetoId, fechadoPorId, prioridade },
+      projetosPermitidos,
+    ).then((responsaveis) => {
+      if (!cancelado) setResponsaveisDisponiveis(responsaveis)
+    })
+    return () => {
+      cancelado = true
+    }
+  }, [dataInicio, dataFim, status, setor, projetoId, fechadoPorId, prioridade, projetosPermitidos])
 
   return (
     <Grid align="flex-end">
-      <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
         <DatePickerInput
           radius="lg"
           classNames={CLASSES_INPUT}
@@ -73,7 +98,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
           clearable
         />
       </Grid.Col>
-      <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
         <DatePickerInput
           radius="lg"
           classNames={CLASSES_INPUT}
@@ -84,7 +109,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
           clearable
         />
       </Grid.Col>
-      <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
         <Select
           radius="lg"
           classNames={CLASSES_INPUT}
@@ -97,7 +122,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
           allowDeselect={false}
         />
       </Grid.Col>
-      <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
         <Select
           radius="lg"
           classNames={CLASSES_INPUT}
@@ -109,21 +134,8 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
           clearable
         />
       </Grid.Col>
-      <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
-        <Select
-          radius="lg"
-          classNames={CLASSES_INPUT}
-          label="Projeto"
-          placeholder="Todos"
-          data={projetosPermitidos.map((p) => ({ value: String(p.id), label: p.nome }))}
-          value={filtros.projetoId === null ? null : String(filtros.projetoId)}
-          onChange={(valor) =>
-            onChange({ ...filtros, projetoId: valor === null ? null : Number(valor) })
-          }
-          clearable
-        />
-      </Grid.Col>
-      <Grid.Col span={{ base: 12, sm: 6, md: 2 }}>
+
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
         <Select
           radius="lg"
           classNames={CLASSES_INPUT}
@@ -138,6 +150,22 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
           clearable
         />
       </Grid.Col>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+        <Select
+          radius="lg"
+          classNames={CLASSES_INPUT}
+          label="Responsável"
+          placeholder="Todos"
+          data={responsaveisDisponiveis.map((r) => ({ value: String(r.id), label: r.nome }))}
+          value={filtros.responsavelId === null ? null : String(filtros.responsavelId)}
+          onChange={(valor) =>
+            onChange({ ...filtros, responsavelId: valor === null ? null : Number(valor) })
+          }
+          searchable
+          clearable
+        />
+      </Grid.Col>
+
     </Grid>
   )
 }
