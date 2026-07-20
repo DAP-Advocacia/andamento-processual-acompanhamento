@@ -77,7 +77,7 @@ export function MetricasCards({
   return (
     <div>
       <Group justify="space-between" mb="xs">
-        <Text fw={600} c="white">
+        <Text fw={600} className={classes.tituloGrupo}>
           {tituloGrupo}
         </Text>
 

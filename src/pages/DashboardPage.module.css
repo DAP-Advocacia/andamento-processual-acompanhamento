@@ -1,6 +1,6 @@
-/* Fundo do painel segue o tema ativo (dark = azul-marinho original, light =
-   #c7c7c7); textos auxiliares e controles do tema claro do Mantine precisam
-   clarear para manter contraste sobre ele. Transição suave na troca de tema. */
+/* Fundo do painel segue o tema ativo (padrão = #c7c7c7, alternativo = branco);
+   textos auxiliares seguem --cor-texto-pagina para manter contraste nos dois
+   temas. Transição suave na troca de tema. */
 .page {
   position: relative;
   min-height: 100dvh;
@@ -23,11 +23,13 @@
 }
 
 .page :global(.mantine-Title-root) {
-  color: var(--mantine-color-white);
+  color: var(--cor-texto-pagina);
+  transition: color 0.25s ease;
 }
 
 .page :global(.mantine-InputWrapper-label) {
-  color: var(--mantine-color-white);
+  color: var(--cor-texto-pagina);
+  transition: color 0.25s ease;
 }
 
 /* Controles não-ativos usam o padrão do Mantine (fundo branco, texto escuro) —

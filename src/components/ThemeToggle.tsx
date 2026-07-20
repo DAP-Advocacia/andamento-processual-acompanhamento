@@ -1,7 +1,7 @@
 import { useTemaPainel } from '../hooks/useTemaPainel'
 import classes from './ThemeToggle.module.css'
 
-/** Alterna entre os temas dark (original) e light (#c7c7c7), no canto superior esquerdo. */
+/** Alterna entre o tema padrão (fundo #c7c7c7) e o alternativo (fundo branco), no canto superior esquerdo. */
 export function ThemeToggle() {
   const [tema, alternar] = useTemaPainel()
 

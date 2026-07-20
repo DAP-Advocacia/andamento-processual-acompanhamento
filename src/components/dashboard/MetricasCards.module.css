@@ -1,11 +1,19 @@
 /* Layout do "Grouped stats" do Mantine UI: card único com estatísticas lado a
-   lado, fundo branco sobre o azul-marinho da página. */
+   lado, sempre com fundo branco e texto escuro — independente do tema da
+   página (mesmo padrão de GraficosInteligencia.module.css .cartao). */
 .root {
   display: flex;
   background-color: var(--mantine-color-white);
   padding: calc(var(--mantine-spacing-xl) * 1.5);
   border-radius: var(--mantine-radius-md);
   overflow: hidden;
+  box-shadow: 0 0 0 1px var(--cor-sombra-contraste), 0 4px 16px var(--cor-sombra-contraste);
+  transition: box-shadow 0.25s ease;
+}
+
+.tituloGrupo {
+  color: var(--cor-texto-pagina);
+  transition: color 0.25s ease;
 }
 
 /* Envolve o card e ancora os chevrons de navegação nas margens laterais. */
@@ -25,17 +33,18 @@
   justify-content: center;
   border: calc(0.0625rem * var(--mantine-scale)) solid transparent;
   cursor: pointer;
-  color: var(--mantine-color-white);
+  color: var(--cor-texto-pagina);
   height: var(--pagination-control-size, 2rem);
   min-width: var(--pagination-control-size, 2rem);
   font-size: var(--pagination-control-fz, var(--mantine-font-size-md));
   line-height: 1;
   border-radius: var(--mantine-radius-default);
-  background-color: rgb(255 255 255 / 0.12);
+  background-color: var(--cor-sombra-contraste);
+  transition: color 0.25s ease, background-color 0.25s ease;
 }
 
 .navControl:hover {
-  background-color: rgb(255 255 255 / 0.22);
+  filter: brightness(1.15);
 }
 
 .navAnterior {
@@ -53,15 +62,16 @@
   justify-content: center;
   border: calc(0.0625rem * var(--mantine-scale)) solid transparent;
   cursor: pointer;
-  color: var(--mantine-color-white);
+  color: var(--cor-texto-pagina);
   height: var(--pagination-control-size, 2rem);
   width: var(--pagination-control-size, 2rem);
   border-radius: 50%;
-  background-color: rgb(255 255 255 / 0.12);
+  background-color: var(--cor-sombra-contraste);
+  transition: color 0.25s ease, background-color 0.25s ease;
 }
 
 .syncControl:hover {
-  background-color: rgb(255 255 255 / 0.22);
+  filter: brightness(1.15);
 }
 
 .syncControl:disabled {

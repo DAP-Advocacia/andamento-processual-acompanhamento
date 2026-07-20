@@ -1,17 +1,21 @@
 :root {
   color-scheme: dark;
-  /* Tema "dark" (default/original): azul-marinho de fundo, texto branco. */
-  --cor-fundo-pagina: #0d1b3a;
+  /* Tema padrão: fundo primário #c7c7c7, secundário branco, texto branco. */
+  --cor-fundo-pagina: #c7c7c7;
+  --cor-fundo-secundario: #ffffff;
   --cor-texto-pagina: #ffffff;
-  --cor-sombra-contraste: rgb(255 255 255 / 0.18);
+  --cor-sombra-contraste: rgb(255 255 255 / 0.35);
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  /* Tema "light": fundo cinza-claro pedido, texto branco mantido para contraste. */
-  --cor-fundo-pagina: #c7c7c7;
-  --cor-texto-pagina: #ffffff;
-  --cor-sombra-contraste: rgb(13 27 58 / 0.35);
+  /* Tema alternativo (botão): as duas cores trocam de papel — primário
+     branco, secundário #c7c7c7 — e o texto vira escuro para continuar
+     legível sobre o fundo branco. */
+  --cor-fundo-pagina: #ffffff;
+  --cor-fundo-secundario: #c7c7c7;
+  --cor-texto-pagina: #1a1a1a;
+  --cor-sombra-contraste: rgb(0 0 0 / 0.18);
 }
 
 /* Mantido por compatibilidade com CSS Modules existentes que já referenciam

@@ -151,7 +151,7 @@ export function DashboardPage() {
           />
 
           <div>
-            <Title order={3} c="white" mb="md">
+            <Title order={3} mb="md">
               Inteligência — visão por equipe
             </Title>
             {erroDados ? (
