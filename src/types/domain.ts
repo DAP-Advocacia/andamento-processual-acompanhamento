@@ -183,6 +183,10 @@ export interface MetricasTarefas {
   concluidas: number
   atrasadas: number
   eficiencia: number
+  vencemEmBreve: number
+  aguardandoRevisao: number
+  emAndamento: number
+  taxaAtraso: number
 }
 
 export interface MetricasPorSetor {

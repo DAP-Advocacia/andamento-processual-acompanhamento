@@ -32,7 +32,25 @@ export function calcularMetricas(tarefas: Tarefa[]): MetricasTarefas {
   const agora = new Date()
   const atrasadas = tarefas.filter((t) => tarefaEstaAtrasada(t, agora)).length
   const eficiencia = total === 0 ? 0 : (concluidas / total) * 100
-  return { total, concluidas, atrasadas, eficiencia }
+
+  const tresDiasEmMs = 3 * 24 * 60 * 60 * 1000
+  const vencemEmBreve = tarefas.filter(t => {
+    if (t.status >= STATUS_CONCLUIDO) return false
+    const prazo = new Date(t.prazoFinal).getTime()
+    const diff = prazo - agora.getTime()
+    return diff >= 0 && diff <= tresDiasEmMs
+  }).length
+
+  const aguardandoRevisao = tarefas.filter(t => t.status === 4).length
+  const emAndamento = tarefas.filter(t => tarefaNoPrazo(t, agora)).length
+  
+  const ativas = total - concluidas - tarefas.filter(t => t.status === 6).length
+  const taxaAtraso = ativas === 0 ? 0 : (atrasadas / ativas) * 100
+
+  return { 
+    total, concluidas, atrasadas, eficiencia, 
+    vencemEmBreve, aguardandoRevisao, emAndamento, taxaAtraso 
+  }
 }
 
 export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Tarefa[] {

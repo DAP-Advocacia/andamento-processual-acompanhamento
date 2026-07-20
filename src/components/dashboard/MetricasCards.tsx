@@ -15,24 +15,34 @@ interface MetricasCardsProps {
 function montarStats(metricas: MetricasTarefas) {
   return [
     {
-      label: 'Total',
-      valor: String(metricas.total),
-      descricao: 'Tarefas com prazo nos projetos monitorados',
+      label: 'Em Andamento',
+      valor: String(metricas.emAndamento),
+      descricao: 'Tarefas ativas dentro do prazo',
+    },
+    {
+      label: 'Risco de Atraso',
+      valor: String(metricas.vencemEmBreve),
+      descricao: 'Vencem nos próximos 3 dias',
+    },
+    {
+      label: 'Atrasadas',
+      valor: String(metricas.atrasadas),
+      descricao: 'Não concluídas com prazo já vencido',
+    },
+    {
+      label: 'Taxa de Atraso',
+      valor: `${metricas.taxaAtraso.toFixed(1)}%`,
+      descricao: 'Atrasadas em relação ao total ativo',
+    },
+    {
+      label: 'Aguardando Controle',
+      valor: String(metricas.aguardandoRevisao),
+      descricao: 'Tarefas pendentes de revisão/aprovação',
     },
     {
       label: 'Concluídas',
       valor: String(metricas.concluidas),
       descricao: 'Tarefas com status "Concluído"',
-    },
-    {
-      label: 'Atrasadas',
-      valor: String(metricas.atrasadas),
-      descricao: 'Não concluídas com prazo final já vencido',
-    },
-    {
-      label: 'Eficiência',
-      valor: `${metricas.eficiencia.toFixed(1)}%`,
-      descricao: 'Concluídas em relação ao total',
     },
   ]
 }

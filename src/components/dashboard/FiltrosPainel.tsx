@@ -7,10 +7,8 @@ import {
   listarSetoresDisponiveis,
 } from '../../services/dashboardService'
 import {
-  PRIORIDADE_LABELS,
   type FiltroStatus,
   type FiltrosDashboard,
-  type PrioridadeTarefa,
   type Projeto,
 } from '../../types/domain'
 import classes from './FiltrosPainel.module.css'
