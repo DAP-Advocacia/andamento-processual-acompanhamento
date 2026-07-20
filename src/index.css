@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  /* Tema padrão: fundo primário #c7c7c7, secundário branco, texto branco. */
+  /* Tema padrão: fundo sólido #c7c7c7, texto/bordas em branco (porcelain). */
   --cor-fundo-pagina: #c7c7c7;
   --cor-fundo-secundario: #ffffff;
   --cor-texto-pagina: #ffffff;
@@ -9,13 +9,12 @@
 
 :root[data-theme='light'] {
   color-scheme: light;
-  /* Tema alternativo (botão): as duas cores trocam de papel — primário
-     branco, secundário #c7c7c7 — e o texto vira escuro para continuar
-     legível sobre o fundo branco. */
+  /* Tema alternativo (botão): inverte — fundo sólido branco, texto/bordas em
+     #c7c7c7. Exatamente as mesmas duas cores, só trocando de posição. */
   --cor-fundo-pagina: #ffffff;
   --cor-fundo-secundario: #c7c7c7;
-  --cor-texto-pagina: #1a1a1a;
-  --cor-sombra-contraste: rgb(0 0 0 / 0.18);
+  --cor-texto-pagina: #c7c7c7;
+  --cor-sombra-contraste: rgb(199 199 199 / 0.6);
 }
 
 /* Mantido por compatibilidade com CSS Modules existentes que já referenciam

@@ -1,0 +1,10 @@
+.titulo {
+  color: var(--cor-texto-pagina);
+  transition: color 0.25s ease;
+}
+
+.descricao {
+  color: var(--cor-texto-pagina);
+  opacity: 0.75;
+  transition: color 0.25s ease;
+}
