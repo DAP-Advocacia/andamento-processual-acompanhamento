@@ -1,44 +1,42 @@
-/* Inputs "de vidro" sobre o fundo da página, no mesmo translúcido dos
-   controles de navegação das métricas (MetricasCards.module.css). Fundo e texto
-   mudam JUNTOS com o tema — texto claro/escuro só é legível porque o fundo
-   deixou de ser o branco padrão do Mantine (ver aviso em
-   DashboardPage.module.css sobre forçar cor de texto sem trocar o fundo). */
+/* Inputs seguem a superfície e o texto do tema ativo (--superficie /
+   --mantine-color-text), mesma família visual dos cartões. Fundo e texto mudam
+   JUNTOS na alternância normal/invertido. */
 .input {
-  background-color: var(--cor-sombra-contraste);
-  border-color: var(--cor-sombra-contraste);
-  color: var(--cor-texto-pagina);
+  background-color: var(--superficie);
+  border-color: var(--superficie-borda);
+  color: var(--mantine-color-text);
   transition:
-    background-color 120ms ease,
+    background-color 0.25s ease,
     border-color 120ms ease,
     color 0.25s ease;
 }
 
 .input:hover {
-  filter: brightness(1.1);
+  filter: brightness(1.05);
 }
 
 .input:focus,
 .input:focus-within,
 .input[data-expanded] {
   border-color: var(--mantine-color-dourado-4);
-  filter: brightness(1.1);
+  filter: brightness(1.05);
 }
 
 /* Cobre o ::placeholder dos inputs de texto e o Input.Placeholder renderizado
    pelo Select/DatePickerInput quando estão vazios. */
 .input::placeholder,
 .input :global(.mantine-InputPlaceholder-placeholder) {
-  color: var(--cor-texto-pagina);
-  opacity: 0.6;
+  color: var(--mantine-color-text);
+  opacity: 0.55;
 }
 
 .label {
   margin-bottom: 5px;
 }
 
-/* Ícones da seção direita (chevron do Select, botão de limpar) sobre o vidro. */
+/* Ícones da seção direita (chevron do Select, botão de limpar). */
 .secao {
-  color: var(--cor-texto-pagina);
+  color: var(--mantine-color-text);
   opacity: 0.75;
   transition: color 0.25s ease;
 }

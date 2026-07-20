@@ -14,12 +14,31 @@ const dourado: MantineColorsTuple = [
   '#433319',
 ]
 
+const fontStack =
+  'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
+
 export const theme = createTheme({
   primaryColor: 'dourado',
   primaryShade: 6,
   defaultRadius: 'md',
+  fontFamily: fontStack,
+  fontFamilyMonospace: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+  headings: { fontFamily: fontStack },
   colors: {
     dourado,
+  },
+  // Superfícies (Paper/Card e componentes derivados) usam a variável de tema
+  // --superficie, definida por color scheme em index.css, para seguir a
+  // alternância normal/invertido junto com o resto da UI.
+  components: {
+    Paper: {
+      styles: {
+        root: {
+          backgroundColor: 'var(--superficie)',
+          color: 'var(--mantine-color-text)',
+        },
+      },
+    },
   },
 })
 

@@ -1,4 +1,4 @@
-import { Text } from '@mantine/core'
+import { Text, useComputedColorScheme } from '@mantine/core'
 import {
   ArcElement,
   BarElement,
@@ -26,11 +26,32 @@ import classes from './GraficosInteligencia.module.css'
 // Registra só os elementos usados (Chart.js é tree-shakeable).
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Legend, Tooltip)
 
-// Cinza recessivo para grade/eixos (ink secundário, nunca a cor de série).
-const COR_GRADE = 'rgba(0, 0, 0, 0.08)'
-const COR_TEXTO = '#495057'
 // Cor única para o gráfico de "Fechado por" (série única, sem semântica de equipe).
 const COR_FECHADO_POR = '#2f6fb0'
+
+/**
+ * Cores de chrome do gráfico (texto de eixos/legenda, grade e o "gap" entre
+ * marcas) derivadas do tema ativo. As cores das SÉRIES (barras/fatias) NÃO
+ * entram aqui — elas identificam equipes/situações e são fixas
+ * (COR_POR_EQUIPE / COR_POR_SITUACAO), independentes do modo claro/escuro.
+ *
+ * O "gap" é a cor da superfície do cartão (o vão de 2px entre marcas empilhadas
+ * deve casar com o fundo do cartão), então muda entre os modos junto com ela.
+ */
+function coresChrome(scheme: 'light' | 'dark') {
+  if (scheme === 'dark') {
+    return {
+      texto: '#c9c9c9',
+      grade: 'rgba(255, 255, 255, 0.12)',
+      gap: '#262626', // = --superficie do modo escuro
+    }
+  }
+  return {
+    texto: '#333333',
+    grade: 'rgba(0, 0, 0, 0.1)',
+    gap: '#ffffff', // = --superficie do modo normal (claro)
+  }
+}
 
 const ORDEM_EQUIPES: EquipeAtendimento[] = [...EQUIPES_ATENDIMENTO, 'indefinido']
 
@@ -72,6 +93,13 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
   // Equipe selecionada pelo ripple; null = todas.
   const [equipeSelecionada, setEquipeSelecionada] = useState<EquipeAtendimento | null>(null)
 
+  // Cores de chrome do gráfico (texto/grade/gap) seguem o tema ativo.
+  const scheme = useComputedColorScheme('dark', { getInitialValueInEffect: true })
+  const cores = useMemo(() => coresChrome(scheme), [scheme])
+  const opcoesEmpilhado = useMemo(() => montarOpcoesEmpilhado(cores), [cores])
+  const opcoesRosca = useMemo(() => montarOpcoesRosca(cores), [cores])
+  const opcoesRanking = useMemo(() => montarOpcoesRanking(cores), [cores])
+
   // Contagem de cards por equipe (para os rótulos dos ripples) — sempre do total,
   // independente da seleção, para o usuário ver o tamanho de cada equipe.
   const totaisPorEquipe = useMemo(() => {
@@ -107,14 +135,14 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
           (equipe) => dados.porEquipe.find((e) => e.equipe === equipe)?.contagem[s.chave] ?? 0,
         ),
         backgroundColor: COR_POR_SITUACAO[s.chave],
-        borderColor: '#ffffff',
+        borderColor: cores.gap,
         borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
         borderRadius: 4,
         borderSkipped: false,
         stack: 'situacao',
       })),
     }),
-    [dados, equipes],
+    [dados, equipes, cores],
   )
 
   const distribuicao = useMemo<ChartData<'doughnut'>>(
@@ -127,12 +155,12 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
             (equipe) => dados.porEquipe.find((e) => e.equipe === equipe)?.contagem.total ?? 0,
           ),
           backgroundColor: equipes.map((equipe) => COR_POR_EQUIPE[equipe]),
-          borderColor: '#ffffff',
+          borderColor: cores.gap,
           borderWidth: 2,
         },
       ],
     }),
-    [dados, equipes],
+    [dados, equipes, cores],
   )
 
   const ranking = useMemo<ChartData<'bar'>>(
@@ -266,48 +294,56 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
   )
 }
 
-const opcoesEmpilhado: ChartOptions<'bar'> = {
-  maintainAspectRatio: false,
-  responsive: true,
-  plugins: {
-    legend: { position: 'bottom', labels: { color: COR_TEXTO, boxWidth: 12, boxHeight: 12 } },
-    tooltip: { enabled: true },
-  },
-  scales: {
-    x: { stacked: true, grid: { display: false }, ticks: { color: COR_TEXTO } },
-    y: {
-      stacked: true,
-      beginAtZero: true,
-      grid: { color: COR_GRADE },
-      ticks: { color: COR_TEXTO, precision: 0 },
+type CoresChrome = ReturnType<typeof coresChrome>
+
+function montarOpcoesEmpilhado(cores: CoresChrome): ChartOptions<'bar'> {
+  return {
+    maintainAspectRatio: false,
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: cores.texto, boxWidth: 12, boxHeight: 12 } },
+      tooltip: { enabled: true },
     },
-  },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { color: cores.texto } },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        grid: { color: cores.grade },
+        ticks: { color: cores.texto, precision: 0 },
+      },
+    },
+  }
 }
 
-const opcoesRosca: ChartOptions<'doughnut'> = {
-  maintainAspectRatio: false,
-  responsive: true,
-  cutout: '58%',
-  plugins: {
-    legend: { position: 'bottom', labels: { color: COR_TEXTO, boxWidth: 12, boxHeight: 12 } },
-    tooltip: { enabled: true },
-  },
+function montarOpcoesRosca(cores: CoresChrome): ChartOptions<'doughnut'> {
+  return {
+    maintainAspectRatio: false,
+    responsive: true,
+    cutout: '58%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: cores.texto, boxWidth: 12, boxHeight: 12 } },
+      tooltip: { enabled: true },
+    },
+  }
 }
 
-const opcoesRanking: ChartOptions<'bar'> = {
-  maintainAspectRatio: false,
-  responsive: true,
-  indexAxis: 'y',
-  plugins: {
-    legend: { display: false },
-    tooltip: { enabled: true },
-  },
-  scales: {
-    x: {
-      beginAtZero: true,
-      grid: { color: COR_GRADE },
-      ticks: { color: COR_TEXTO, precision: 0 },
+function montarOpcoesRanking(cores: CoresChrome): ChartOptions<'bar'> {
+  return {
+    maintainAspectRatio: false,
+    responsive: true,
+    indexAxis: 'y',
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true },
     },
-    y: { grid: { display: false }, ticks: { color: COR_TEXTO } },
-  },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: { color: cores.grade },
+        ticks: { color: cores.texto, precision: 0 },
+      },
+      y: { grid: { display: false }, ticks: { color: cores.texto } },
+    },
+  }
 }

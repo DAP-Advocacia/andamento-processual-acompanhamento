@@ -1,12 +1,12 @@
-/* Fundo do painel segue o tema ativo (padrão = #c7c7c7, alternativo = branco);
-   textos auxiliares seguem --cor-texto-pagina para manter contraste nos dois
-   temas. Transição suave na troca de tema. */
+/* Fundo do painel = cor primária do tema ativo (--mantine-color-body), definida
+   por color scheme em index.css. Títulos/labels já herdam --mantine-color-text
+   do Mantine, então não precisam de override aqui. Transição suave na troca. */
 .page {
   position: relative;
   min-height: 100dvh;
-  background-color: var(--cor-fundo-pagina);
-  transition: background-color 0.25s ease;
-  --mantine-color-dimmed: var(--mantine-color-gray-4);
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* Conteúdo centralizado em 70% da largura (15% de margem de cada lado). */
@@ -21,17 +21,3 @@
     width: 92%;
   }
 }
-
-.page :global(.mantine-Title-root) {
-  color: var(--cor-texto-pagina);
-  transition: color 0.25s ease;
-}
-
-.page :global(.mantine-InputWrapper-label) {
-  color: var(--cor-texto-pagina);
-  transition: color 0.25s ease;
-}
-
-/* Controles não-ativos usam o padrão do Mantine (fundo branco, texto escuro) —
-   deixar essa combinação intacta é o que garante contraste; forçar texto
-   branco aqui deixava os ícones de seta invisíveis sobre o fundo branco. */

@@ -1,6 +1,6 @@
-/* Gráficos de inteligência: cartões brancos sobre o fundo azul-marinho, em grade
-   responsiva. Cada canvas do Chart.js fica com altura fixa para o layout não
-   "pular" enquanto os dados carregam. */
+/* Gráficos de inteligência: cartões em grade responsiva, superfície e texto
+   seguindo o tema ativo (--superficie / --mantine-color-text). Cada canvas do
+   Chart.js tem altura fixa para o layout não "pular" enquanto carrega. */
 
 .grade {
   display: grid;
@@ -15,14 +15,16 @@
 }
 
 .cartao {
-  background-color: var(--mantine-color-white);
+  background-color: var(--superficie);
   border-radius: var(--mantine-radius-md);
   padding: var(--mantine-spacing-md);
-  color: var(--mantine-color-black);
+  color: var(--mantine-color-text);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 0 1px var(--cor-sombra-contraste), 0 4px 16px var(--cor-sombra-contraste);
-  transition: box-shadow 0.25s ease;
+  border: 1px solid var(--superficie-borda);
+  box-shadow: 0 4px 16px var(--sombra-contraste);
+  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
 /* Card largo (ocupa a linha inteira) — usado no ranking por responsável. */
@@ -31,11 +33,12 @@
 }
 
 .tituloCartao {
-  color: var(--mantine-color-black);
+  color: var(--mantine-color-text);
 }
 
 .subtitulo {
-  color: var(--mantine-color-gray-6);
+  color: var(--mantine-color-text);
+  opacity: 0.7;
   margin-bottom: var(--mantine-spacing-sm);
 }
 
@@ -65,15 +68,15 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--cor-sombra-contraste);
+  border: 1px solid var(--superficie-borda);
   border-radius: 999px;
   padding: 6px 14px;
   font-size: var(--mantine-font-size-sm);
   font-weight: 500;
-  color: var(--cor-texto-pagina);
+  color: var(--mantine-color-text);
   cursor: pointer;
   background-clip: padding-box;
-  background-color: transparent;
+  background-color: var(--superficie);
   transition: border-color 0.12s ease, background-color 0.12s ease, opacity 0.15s ease,
     color 0.25s ease;
 }
@@ -99,8 +102,8 @@
 }
 
 .rippleAtivo {
-  border-color: var(--cor-texto-pagina);
-  background-color: var(--cor-sombra-contraste);
+  border-color: var(--mantine-color-text);
+  background-color: var(--sombra-contraste);
   font-weight: 700;
 }
 
@@ -115,8 +118,8 @@
   position: absolute;
   border-radius: 50%;
   transform: scale(0);
-  background-color: var(--cor-texto-pagina);
-  opacity: 0.5;
+  background-color: var(--mantine-color-text);
+  opacity: 0.4;
   pointer-events: none;
   animation: ripple-expand 0.6s ease-out;
 }

@@ -1,31 +1,66 @@
-:root {
-  color-scheme: dark;
-  /* Tema padrão: fundo sólido #c7c7c7, texto/bordas em branco (porcelain). */
-  --cor-fundo-pagina: #c7c7c7;
-  --cor-fundo-secundario: #ffffff;
-  --cor-texto-pagina: #ffffff;
-  --cor-sombra-contraste: rgb(255 255 255 / 0.35);
+/* Sistema de tema baseado no color-scheme NATIVO do Mantine v9.
+ *
+ * Dois modos, alternados pelo botão (o Mantine troca o atributo no <html>):
+ *
+ *   - MODO NORMAL  (data-mantine-color-scheme="light", default): fundo claro
+ *     #c7c7c7, texto/detalhes escuros. Superfície dos cartões em branco.
+ *   - MODO ESCURO  (data-mantine-color-scheme="dark"): fundo escuro #1a1a1a,
+ *     texto claro. Superfície dos cartões um degrau acima do fundo.
+ *
+ * "primária" = cor do FUNDO (--mantine-color-body); "secundária" = cor da
+ * FONTE/bordas (--mantine-color-text). Como sobrescrevemos as variáveis nativas
+ * do Mantine, TODO componente (Paper, Card, Text, inputs) segue o tema sozinho.
+ * `--superficie` é o fundo dos cartões, um degrau de contraste do fundo.
+ */
+
+:root[data-mantine-color-scheme='light'] {
+  --cor-primaria: #c7c7c7;
+  --cor-secundaria: #1f1f1f;
+  --superficie: #ffffff;
+  --superficie-borda: rgb(0 0 0 / 0.12);
+  --sombra-contraste: rgb(0 0 0 / 0.15);
+
+  --mantine-color-body: var(--cor-primaria);
+  --mantine-color-text: var(--cor-secundaria);
 }
 
-:root[data-theme='light'] {
-  color-scheme: light;
-  /* Tema alternativo (botão): inverte — fundo sólido branco, texto/bordas em
-     #c7c7c7. Exatamente as mesmas duas cores, só trocando de posição. */
-  --cor-fundo-pagina: #ffffff;
-  --cor-fundo-secundario: #c7c7c7;
-  --cor-texto-pagina: #c7c7c7;
-  --cor-sombra-contraste: rgb(199 199 199 / 0.6);
-}
+:root[data-mantine-color-scheme='dark'] {
+  --cor-primaria: #1a1a1a;
+  --cor-secundaria: #ededed;
+  --superficie: #262626;
+  --superficie-borda: rgb(255 255 255 / 0.14);
+  --sombra-contraste: rgb(0 0 0 / 0.5);
 
-/* Mantido por compatibilidade com CSS Modules existentes que já referenciam
-   --cor-azul-fundo — aponta para a variável de tema atual. */
-:root {
-  --cor-azul-fundo: var(--cor-fundo-pagina);
+  --mantine-color-body: var(--cor-primaria);
+  --mantine-color-text: var(--cor-secundaria);
 }
 
 body {
   margin: 0;
-  background-color: var(--cor-fundo-pagina);
-  color: var(--cor-texto-pagina);
-  transition: background-color 0.25s ease, color 0.25s ease;
+  background-color: var(--mantine-color-body);
+  color: var(--mantine-color-text);
+}
+
+/* Fade suave global na troca de tema. Escopado a cor/fundo/borda/sombra e a
+   um cubic-bezier curto, para todos os elementos (Mantine e nossos) animarem
+   juntos quando o color-scheme muda no <html>. Fill/stroke cobre os SVGs.
+   Não incluímos transform, então o ripple e o spinner (que animam transform)
+   não são afetados. */
+:root,
+:root *:not(svg):not(path) {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    fill 0.3s ease,
+    stroke 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Respeita quem pediu menos movimento: sem fade de tema. */
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  :root *:not(svg):not(path) {
+    transition: none;
+  }
 }
