@@ -1,9 +1,22 @@
 # Dashboard de Andamento Processual
 
 Dashboard embutido no Bitrix24 que acompanha tarefas com prazo dos projetos
-monitorados: métricas gerais e por setor, filtros combináveis e tabela paginada
-com detalhes de cada tarefa. Não há backend próprio — tudo é buscado direto do
-Bitrix24 via SDK JS (`BX24`), executando com as permissões do usuário logado.
+monitorados: métricas gerais e por setor, filtros combináveis e uma tela de
+inteligência com gráficos por equipe de atendimento.
+
+## Arquitetura de dados
+
+- **Tarefas** (o grosso do volume): o Bitrix24 deste portal é lento demais no
+  método `tasks.task.list` para buscar ao vivo no navegador (grupos
+  monitorados somam centenas de milhares de tarefas). Por isso, um
+  microsserviço próprio — [worker-sync-dashboard-andamento-processual](https://github.com/dacostabmd/worker-sync-dashboard-andamento-processual)
+  (FastAPI + SQLite, rodando numa VPS via Docker Compose) — sincroniza
+  continuamente em background e mantém um snapshot pronto. O front lê esse
+  snapshot via `VITE_SYNC_API_URL` (`GET /snapshot`), instantâneo
+  independente do volume real no Bitrix.
+- **Acesso, grupos e departamentos** (chamadas leves): continuam ao vivo,
+  via `window.BX24` quando embutido no Bitrix, ou webhook REST
+  (`VITE_BITRIX_API_URL`) fora do iframe.
 
 ## Desenvolvimento
 
@@ -12,10 +25,10 @@ npm install
 npm run dev
 ```
 
-Os dados vêm sempre ao vivo do Bitrix (não há mais mock). Embutido no Bitrix o
-app usa o `window.BX24`; fora do iframe, defina `VITE_BITRIX_API_URL` (webhook
-REST de entrada) no `.env` para o app buscar os dados via `fetch`. Sem nenhuma
-das duas fontes, a tela mostra um estado de erro pedindo a configuração.
+Sem `VITE_SYNC_API_URL` configurada (ou com o serviço fora do ar/sem sync
+concluído), a tela de inteligência mostra um estado de erro explícito. Embutido
+no Bitrix o app usa o `window.BX24` para acesso/departamentos; fora do iframe,
+defina `VITE_BITRIX_API_URL` no `.env`.
 
 Outros comandos: `npm run build` (typecheck + build), `npm run lint`,
 `npm run format`.
@@ -25,6 +38,7 @@ Outros comandos: `npm run build` (typecheck + build), `npm run lint`,
 | Variável | Descrição | Padrão |
 | --- | --- | --- |
 | `VITE_BITRIX_GRUPOS_ALVO` | IDs dos grupos (projetos) do Bitrix24 monitorados, separados por vírgula. Aplicada em tempo de build. | `86,92,94` |
+| `VITE_SYNC_API_URL` | URL do microsserviço de sincronização (worker-sync-dashboard-andamento-processual). Sem token embutido. | — |
 
 ## Deploy na Vercel
 

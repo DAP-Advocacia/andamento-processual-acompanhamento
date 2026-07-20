@@ -12,15 +12,18 @@ interface GrupoBitrix {
 }
 
 /**
- * Resolve o colaborador logado + os projetos aos quais ele tem acesso, sempre ao
- * vivo do Bitrix (não há mock nem backend próprio):
+ * Resolve o colaborador logado + os projetos monitorados, sempre ao vivo do
+ * Bitrix (não há mock nem backend próprio). A tela de inteligência trabalha
+ * sobre TODOS os GRUPOS_MONITORADOS (não só os grupos de trabalho do usuário
+ * logado) — os grupos do usuário servem apenas para decidir se ele tem acesso:
  *
  *  - Embutido no Bitrix (BX24): busca os grupos do usuário atual via
- *    `sonet_group.user.groups` (chamada como o próprio usuário), restringindo a
- *    GRUPOS_MONITORADOS. Retorna `null` se o usuário não está em nenhum deles
- *    ("sem acesso" — não é erro fatal; ver useSessaoUsuario / EstadoVazio).
+ *    `sonet_group.user.groups` (chamada como o próprio usuário). Se nenhum
+ *    deles está em GRUPOS_MONITORADOS, retorna `null` ("sem acesso" — não é
+ *    erro fatal; ver useSessaoUsuario / EstadoVazio). Caso contrário, os
+ *    `projetosPermitidos` retornados são TODOS os GRUPOS_MONITORADOS.
  *  - Via webhook REST (fora do iframe): não há sessão de usuário, então assume
- *    todos os GRUPOS_MONITORADOS fixos e busca seus nomes via `sonet_group.get`.
+ *    acesso liberado a todos os GRUPOS_MONITORADOS fixos.
  *  - Sem fonte real: lança, e o chamador mostra o estado de erro.
  */
 export async function resolverAcesso(
@@ -29,18 +32,17 @@ export async function resolverAcesso(
 ): Promise<SessaoUsuario | null> {
   if (bx24Disponivel()) {
     const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.user.groups')
-    const projetosPermitidos = grupos
-      .filter((g) => GRUPOS_MONITORADOS.includes(Number(g.GROUP_ID)))
-      .map((g) => ({ id: Number(g.GROUP_ID), nome: g.GROUP_NAME ?? `Projeto ${g.GROUP_ID}` }))
+    const temAcessoAMonitorado = grupos.some((g) => GRUPOS_MONITORADOS.includes(Number(g.GROUP_ID)))
 
-    if (projetosPermitidos.length === 0) {
+    if (!temAcessoAMonitorado) {
       return null
     }
+    const projetosPermitidos = await gruposMonitoradosViaWebhook()
     return { colaborador: { id: idBitrix, nome, ativo: true }, projetosPermitidos }
   }
 
   if (fonteAtiva() === 'webhook') {
-    const projetosPermitidos = await grupposMonitoradosViaWebhook()
+    const projetosPermitidos = await gruposMonitoradosViaWebhook()
     return {
       colaborador: { id: idBitrix, nome, ativo: true },
       projetosPermitidos,
@@ -52,8 +54,8 @@ export async function resolverAcesso(
   )
 }
 
-/** Nomes dos grupos monitorados via webhook (sem sessão de usuário). */
-async function grupposMonitoradosViaWebhook(): Promise<Projeto[]> {
+/** Nomes de todos os grupos monitorados (via `sonet_group.get`, sem depender de sessão). */
+async function gruposMonitoradosViaWebhook(): Promise<Projeto[]> {
   const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.get', {
     FILTER: { ID: GRUPOS_MONITORADOS },
   })

@@ -1,6 +1,7 @@
 import { Center, Loader, Stack, Title } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { EquipesResolvidas } from '../components/dashboard/EquipesResolvidas'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
@@ -16,7 +17,7 @@ import {
 } from '../services/dashboardService'
 import { fonteAtiva } from '../services/bitrixTransport'
 import {
-  FILTROS_VAZIOS,
+  filtrosVazios,
   type EquipeResolvida,
   type FiltrosDashboard,
   type MetricasPorSetor,
@@ -28,7 +29,7 @@ import classes from './DashboardPage.module.css'
 export function DashboardPage() {
   const { estado, colaborador, projetosPermitidos, mensagemErro } = useSessaoUsuario()
 
-  const [filtros, setFiltros] = useState<FiltrosDashboard>(FILTROS_VAZIOS)
+  const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorSetor, setMetricasPorSetor] = useState<MetricasPorSetor[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
@@ -171,6 +172,7 @@ export function DashboardPage() {
 
   return (
     <div className={classes.page}>
+      <ThemeToggle />
       {conteudo}
       <DebugBitrixPanel />
     </div>

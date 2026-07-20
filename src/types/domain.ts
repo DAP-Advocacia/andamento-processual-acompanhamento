@@ -68,9 +68,9 @@ export interface Tarefa {
 }
 
 /**
- * Equipes de atendimento reconhecidas — cada uma é o nome de um departamento no
- * Bitrix24. Um responsável cujo departamento não bate com nenhuma cai em
- * "indefinido".
+ * Equipes de atendimento reconhecidas — cada uma é o departamento (pelo ID no
+ * Bitrix24) da respectiva superiora. Um responsável cujo departamento não bate
+ * com nenhum ID cai em "indefinido".
  */
 export const EQUIPES_ATENDIMENTO = [
   'Cinthia Filgueiras',
@@ -80,6 +80,14 @@ export const EQUIPES_ATENDIMENTO = [
 ] as const
 
 export type EquipeAtendimento = (typeof EQUIPES_ATENDIMENTO)[number] | 'indefinido'
+
+/** ID do departamento (Bitrix24) de cada equipe de atendimento. */
+export const DEPARTAMENTO_ID_POR_EQUIPE: Record<(typeof EQUIPES_ATENDIMENTO)[number], number> = {
+  'Cinthia Filgueiras': 782,
+  'Simone Freitas': 784,
+  'Quézia Karen': 864,
+  'Lorena Pontes': 862,
+}
 
 /**
  * "Pacote" da tela de inteligência: todos os cards atribuídos a um mesmo
@@ -167,15 +175,27 @@ export interface FiltrosDashboard {
   prioridade: PrioridadeTarefa | null
 }
 
-export const FILTROS_VAZIOS: FiltrosDashboard = {
-  dataInicio: null,
-  dataFim: null,
-  status: 'todos',
-  setor: null,
-  projetoId: null,
-  fechadoPorId: null,
-  responsavelId: null,
-  prioridade: null,
+/** Janela padrão de busca: evita baixar o histórico inteiro (grupos monitorados somam centenas de milhares de tarefas). */
+export const JANELA_PADRAO_DIAS = 90
+
+function formatarDataIso(data: Date): string {
+  return data.toISOString().slice(0, 10)
+}
+
+/** Filtros vazios com a janela padrão de 90 dias (até hoje) já aplicada. */
+export function filtrosVazios(agora: Date): FiltrosDashboard {
+  const dataInicio = new Date(agora)
+  dataInicio.setDate(dataInicio.getDate() - JANELA_PADRAO_DIAS)
+  return {
+    dataInicio: formatarDataIso(dataInicio),
+    dataFim: formatarDataIso(agora),
+    status: 'todos',
+    setor: null,
+    projetoId: null,
+    fechadoPorId: null,
+    responsavelId: null,
+    prioridade: null,
+  }
 }
 
 export interface MetricasTarefas {

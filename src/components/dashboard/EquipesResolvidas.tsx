@@ -11,8 +11,9 @@ interface EquipesResolvidasProps {
 
 /**
  * Tracking da modelagem de dados: mostra, para cada uma das equipes informadas,
- * se ela foi encontrada como departamento na fonte real (o que a api_url busca).
- * Uma equipe "não encontrada" indica que o nome no código não bate com o Bitrix.
+ * se o ID de departamento configurado (DEPARTAMENTO_ID_POR_EQUIPE) existe de
+ * fato na fonte real (o que a api_url busca). Uma equipe "não encontrada"
+ * indica que o ID no código não bate com nenhum departamento do Bitrix.
  */
 export function EquipesResolvidas({ equipes, fonte }: EquipesResolvidasProps) {
   return (
@@ -26,7 +27,7 @@ export function EquipesResolvidas({ equipes, fonte }: EquipesResolvidasProps) {
         </Badge>
       </Group>
       <Text className={classes.subtitulo} size="xs">
-        Validação dos nomes das equipes contra os departamentos reais buscados na fonte.
+        Validação dos IDs de departamento das equipes contra os departamentos reais buscados na fonte.
       </Text>
 
       <Group gap="sm">

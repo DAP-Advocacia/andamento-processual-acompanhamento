@@ -12,6 +12,14 @@ interface ImportMetaEnv {
    * build para fora da empresa com o token dentro.
    */
   readonly VITE_BITRIX_API_URL?: string
+  /**
+   * URL base do microsserviço de sincronização (FastAPI, hospedado numa VPS
+   * própria) que mantém um snapshot pré-processado das tarefas do Bitrix.
+   * Sem token/segredo embutido — é só leitura de dados já resolvidos, então
+   * não há o mesmo cuidado de segurança da VITE_BITRIX_API_URL. Ex.:
+   * "https://sync.seudominio.com.br".
+   */
+  readonly VITE_SYNC_API_URL?: string
 }
 
 interface ImportMeta {

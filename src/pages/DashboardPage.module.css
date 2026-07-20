@@ -1,9 +1,11 @@
-/* Fundo azul-marinho em toda a página; textos auxiliares e controles do tema
-   claro do Mantine precisam clarear para manter contraste sobre ele. */
+/* Fundo do painel segue o tema ativo (dark = azul-marinho original, light =
+   #c7c7c7); textos auxiliares e controles do tema claro do Mantine precisam
+   clarear para manter contraste sobre ele. Transição suave na troca de tema. */
 .page {
   position: relative;
   min-height: 100dvh;
-  background-color: var(--cor-azul-fundo);
+  background-color: var(--cor-fundo-pagina);
+  transition: background-color 0.25s ease;
   --mantine-color-dimmed: var(--mantine-color-gray-4);
 }
 

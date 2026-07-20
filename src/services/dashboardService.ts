@@ -1,5 +1,5 @@
-import { fonteAtiva, listarTodasPaginas } from './bitrixTransport'
-import { reiniciarCapturaBitrix, registrarTarefasResolvidas } from './debugBitrix'
+import { listarTodasPaginas } from './bitrixTransport'
+import { registrarSnapshotMetadata } from './debugSnapshot'
 import {
   aplicarFiltros,
   calcularMetricas,
@@ -7,67 +7,18 @@ import {
   empacotarPorAtendimento,
 } from '../utils/tarefasMetrics'
 import {
+  DEPARTAMENTO_ID_POR_EQUIPE,
   EQUIPES_ATENDIMENTO,
-  type EquipeAtendimento,
   type EquipeResolvida,
   type FiltrosDashboard,
   type MetricasPorSetor,
   type MetricasTarefas,
   type PacoteAtendimento,
-  type PrioridadeTarefa,
   type Projeto,
-  type StatusTarefa,
   type Tarefa,
 } from '../types/domain'
 
-/** Campo customizado do card com o responsável pelo atendimento ao cliente. */
-const CAMPO_RESPONSAVEL_ATENDIMENTO = 'UF_CRM_20_1780943729'
-
-/**
- * Campo customizado "Fechado por" (userfield que será criado no card). Distinto
- * do CLOSED_BY nativo. Ajuste esta constante quando o nome real do campo existir
- * no Bitrix — o painel de debug mostra os campos brutos do card para confirmar.
- */
-const CAMPO_FECHADO_POR = 'UF_CRM_FECHADO_POR'
-
-// --- Carga dos dados: sempre ao vivo do Bitrix (BX24 embutido ou webhook REST) ---
-//
-// Não há backend/banco próprio nem mock: a versão real busca tudo direto do
-// Bitrix a cada carregamento do dashboard e mantém em memória pelo
-// tempo de vida da página — não há necessidade de refazer as chamadas a cada troca
-// de filtro, já que os filtros são só uma questão de recombinar os mesmos dados.
-
-let cacheChave: string | null = null
-let cachePromise: Promise<Tarefa[]> | null = null
-
-let cacheUsuarios: Promise<Map<number, { nome: string; departamentoIds: number[] }>> | null = null
 let cacheDepartamentos: Promise<Map<number, string>> | null = null
-
-interface TaskBitrix {
-  id: string
-  title: string
-  deadline: string | null
-  realStatus: string
-  closedDate: string | null
-  closedBy: string | null
-  groupId: string
-  responsibleId: string
-  priority: string
-  /**
-   * Campo customizado do responsável pelo atendimento. O conteúdo real varia
-   * (id de usuário, array, ou referência de entidade), por isso é `unknown` e
-   * normalizado em `extrairIdResponsavelAtendimento`. A chave literal é
-   * CAMPO_RESPONSAVEL_ATENDIMENTO — presente sob o mesmo nome no payload.
-   */
-  [CAMPO_RESPONSAVEL_ATENDIMENTO_KEY: string]: unknown
-}
-
-interface UsuarioBitrix {
-  ID: string
-  NAME?: string
-  LAST_NAME?: string
-  UF_DEPARTMENT?: Array<number | string>
-}
 
 interface DepartamentoBitrix {
   ID: string
@@ -87,135 +38,54 @@ function obterDepartamentosBitrix(): Promise<Map<number, string>> {
   return cacheDepartamentos
 }
 
-function obterUsuariosBitrix(): Promise<Map<number, { nome: string; departamentoIds: number[] }>> {
-  if (!cacheUsuarios) {
-    // Sem filtro de ACTIVE: tarefas antigas podem ter sido fechadas por
-    // colaboradores já desativados, e o histórico precisa manter nome/setor.
-    cacheUsuarios = listarTodasPaginas<UsuarioBitrix>('user.get').then((usuarios) => {
-      const mapa = new Map<number, { nome: string; departamentoIds: number[] }>()
-      usuarios.forEach((u) => {
-        const nome = [u.NAME, u.LAST_NAME].filter(Boolean).join(' ') || `Usuário ${u.ID}`
-        const departamentoIds = (u.UF_DEPARTMENT ?? []).map(Number)
-        mapa.set(Number(u.ID), { nome, departamentoIds })
-      })
-      return mapa
-    })
+// --- Carga dos dados: snapshot pré-processado pelo microsserviço de sync ---
+//
+// tasks.task.list é impraticavelmente lento neste portal Bitrix para o volume
+// dos grupos monitorados (medido: ~2,8s/página de 50 itens, ~129 mil tarefas só
+// no grupo 86 nos últimos 90 dias) — buscar ao vivo no navegador nunca
+// terminaria em tempo útil. Um microsserviço próprio (sync-service/, FastAPI
+// numa VPS) sincroniza continuamente em background e mantém um snapshot
+// pronto; o front só lê esse snapshot via HTTP, instantâneo independente do
+// volume real no Bitrix. Ver sync-service/README e VITE_SYNC_API_URL.
+
+let cacheChave: string | null = null
+let cachePromise: Promise<Tarefa[]> | null = null
+
+function baseSyncApiUrl(): string | null {
+  const bruta = import.meta.env.VITE_SYNC_API_URL?.trim()
+  if (!bruta) return null
+  return bruta.endsWith('/') ? bruta.slice(0, -1) : bruta
+}
+
+interface SnapshotMetadata {
+  syncedAt: string
+  windowStart: string
+  windowEnd: string
+  groups: Array<{ id: number; nome: string; taskCount: number; error: string | null }>
+  runId: string
+}
+
+async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
+  const base = baseSyncApiUrl()
+  if (!base) {
+    throw new Error(
+      'Serviço de sincronização não configurado. Defina VITE_SYNC_API_URL apontando para o sync-service.',
+    )
   }
-  return cacheUsuarios
-}
 
-/** tasks.task.list devolve `{ tasks: [...] }` em vez de um array direto. */
-function extrairTasks(payload: unknown): TaskBitrix[] {
-  if (Array.isArray(payload)) return payload as TaskBitrix[]
-  return (payload as { tasks?: TaskBitrix[] }).tasks ?? []
-}
+  const resposta = await fetch(`${base}/snapshot`)
+  if (resposta.status === 404) {
+    throw new Error(
+      'Nenhuma sincronização concluída ainda no serviço de sync. Aguarde o próximo ciclo.',
+    )
+  }
+  if (!resposta.ok) {
+    throw new Error(`Erro ao ler o snapshot de tarefas (HTTP ${resposta.status}).`)
+  }
 
-/**
- * Normaliza um campo customizado que referencia um usuário (responsável pelo
- * atendimento, fechado por, etc.) em um id de usuário. O conteúdo real desses
- * userfields ainda é incerto — pode vir como número, string numérica, array
- * (multi-valor) ou referência tipo "user_123" —, então extraímos o primeiro id
- * numérico que aparecer. O painel de debug mostra o valor bruto para confirmar
- * o formato contra os dados reais do Bitrix.
- */
-function extrairIdUsuario(valorBruto: unknown): number | null {
-  const valor = Array.isArray(valorBruto) ? valorBruto[0] : valorBruto
-  if (valor === null || valor === undefined || valor === '') return null
-  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null
-  const casado = String(valor).match(/\d+/)
-  if (!casado) return null
-  const id = Number(casado[0])
-  return Number.isFinite(id) && id > 0 ? id : null
-}
-
-/**
- * Classifica um responsável em uma das equipes de atendimento a partir dos
- * nomes dos departamentos dele. Se nenhum departamento bater com as equipes
- * conhecidas (ou o responsável não tiver departamento), retorna "indefinido".
- */
-function equipeDoAtendimento(nomesDepartamentos: string[]): EquipeAtendimento {
-  const encontrada = EQUIPES_ATENDIMENTO.find((equipe) => nomesDepartamentos.includes(equipe))
-  return encontrada ?? 'indefinido'
-}
-
-async function buscarTarefasBitrix(projetosPermitidos: Projeto[]): Promise<Tarefa[]> {
-  // Usuários, departamentos e tarefas em paralelo; tarefas de todos os projetos
-  // permitidos em uma única listagem (GROUP_ID aceita array), paginada em lote
-  // via batch dentro de callMethodTodasPaginas.
-  const [usuarios, departamentos, tasks] = await Promise.all([
-    obterUsuariosBitrix(),
-    obterDepartamentosBitrix(),
-    listarTodasPaginas<TaskBitrix>(
-      'tasks.task.list',
-      {
-        filter: { GROUP_ID: projetosPermitidos.map((p) => p.id) },
-        select: [
-          'ID',
-          'TITLE',
-          'DEADLINE',
-          'REAL_STATUS',
-          'CLOSED_DATE',
-          'CLOSED_BY',
-          'GROUP_ID',
-          'RESPONSIBLE_ID',
-          'PRIORITY',
-          CAMPO_RESPONSAVEL_ATENDIMENTO,
-          CAMPO_FECHADO_POR,
-        ],
-      },
-      extrairTasks,
-    ),
-  ])
-  const projetoNomePorId = new Map(projetosPermitidos.map((p) => [p.id, p.nome]))
-
-  const nomesDepartamentos = (departamentoIds: number[]): string[] =>
-    departamentoIds
-      .map((id) => departamentos.get(id))
-      .filter((nome): nome is string => Boolean(nome))
-
-  const resolvidas = tasks
-    .filter((task) => Boolean(task.deadline)) // sem prazo definido não entra no acompanhamento de prazos
-    .map((task): Tarefa => {
-      const projetoId = Number(task.groupId)
-      const responsavelId = task.responsibleId ? Number(task.responsibleId) : null
-      const responsavel = responsavelId ? usuarios.get(responsavelId) : undefined
-
-      // "Fechado por": prioriza o campo customizado; se vazio, usa o CLOSED_BY
-      // nativo — assim funciona antes e depois de o campo novo existir no card.
-      const fechadoPorId =
-        extrairIdUsuario(task[CAMPO_FECHADO_POR]) ?? (task.closedBy ? Number(task.closedBy) : null)
-      const fechadoPor = fechadoPorId ? usuarios.get(fechadoPorId) : undefined
-
-      const responsavelAtendimentoId = extrairIdUsuario(task[CAMPO_RESPONSAVEL_ATENDIMENTO])
-      const responsavelAtendimento = responsavelAtendimentoId
-        ? usuarios.get(responsavelAtendimentoId)
-        : undefined
-      const departamentosAtendimento = nomesDepartamentos(
-        responsavelAtendimento?.departamentoIds ?? [],
-      )
-
-      return {
-        id: Number(task.id),
-        titulo: task.title,
-        prazoFinal: task.deadline!,
-        status: Number(task.realStatus) as StatusTarefa,
-        finalizadoEm: task.closedDate ?? null,
-        projetoId,
-        projetoNome: projetoNomePorId.get(projetoId) ?? null,
-        fechadoPorId,
-        fechadoPorNome: fechadoPor?.nome ?? null,
-        fechadoPorDepartamentos: nomesDepartamentos(fechadoPor?.departamentoIds ?? []),
-        responsavelId,
-        responsavelNome: responsavel?.nome ?? null,
-        prioridade: task.priority as PrioridadeTarefa,
-        responsavelAtendimentoId,
-        responsavelAtendimentoNome: responsavelAtendimento?.nome ?? null,
-        equipeAtendimento: equipeDoAtendimento(departamentosAtendimento),
-      }
-    })
-
-  registrarTarefasResolvidas(resolvidas)
-  return resolvidas
+  const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
+  registrarSnapshotMetadata(corpo.metadata)
+  return corpo.tarefas
 }
 
 function chaveDoCache(projetosPermitidos: Projeto[]): string {
@@ -231,28 +101,18 @@ function carregarTarefasPermitidas(projetosPermitidos: Projeto[]): Promise<Taref
     return cachePromise
   }
 
-  if (fonteAtiva() === 'nenhuma') {
-    // Sem fonte real (nem BX24 embutido nem VITE_BITRIX_API_URL): não há mais
-    // fixture — falha explicitamente para o front mostrar o estado de erro.
-    return Promise.reject(
-      new Error(
-        'Fonte de dados do Bitrix não configurada. Rode embutido no Bitrix24 ou defina VITE_BITRIX_API_URL.',
-      ),
-    )
-  }
-
+  const idsPermitidos = new Set(projetosPermitidos.map((p) => p.id))
   cacheChave = chave
-  cachePromise = buscarTarefasBitrix(projetosPermitidos)
+  cachePromise = buscarTarefasDoSnapshot().then((tarefas) =>
+    tarefas.filter((t) => t.projetoId !== null && idsPermitidos.has(t.projetoId)),
+  )
   return cachePromise
 }
 
-/** Descarta os caches em memória (tarefas, usuários, departamentos) forçando nova busca no Bitrix. */
+/** Descarta o cache em memória, forçando nova leitura do snapshot mais recente. */
 export async function sincronizarComBitrix(projetosPermitidos: Projeto[]): Promise<void> {
   cacheChave = null
   cachePromise = null
-  cacheUsuarios = null
-  cacheDepartamentos = null
-  reiniciarCapturaBitrix()
   await carregarTarefasPermitidas(projetosPermitidos)
 }
 
@@ -293,19 +153,18 @@ export async function obterPacotesAtendimento(
 }
 
 /**
- * "Busca as equipes das pessoas informadas": valida os 4 nomes de equipe contra
- * os departamentos reais do Bitrix (via a fonte ativa — BX24 ou webhook/api_url).
- * Serve ao tracking da modelagem de dados exibido junto aos gráficos.
+ * "Busca as equipes das pessoas informadas": confirma que o ID de departamento
+ * configurado em DEPARTAMENTO_ID_POR_EQUIPE existe de fato no Bitrix (via a
+ * fonte ativa — BX24 ou webhook/api_url). Serve ao tracking da modelagem de
+ * dados exibido junto aos gráficos.
  */
 export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
   const departamentos = await obterDepartamentosBitrix()
-  // nome do departamento -> id (para achar cada equipe pelo nome).
-  const idPorNome = new Map<string, number>()
-  departamentos.forEach((nome, id) => idPorNome.set(nome, id))
 
   return EQUIPES_ATENDIMENTO.map((nome) => {
-    const departamentoId = idPorNome.get(nome) ?? null
-    return { nome, departamentoId, encontrada: departamentoId !== null }
+    const departamentoId = DEPARTAMENTO_ID_POR_EQUIPE[nome]
+    const encontrada = departamentos.has(departamentoId)
+    return { nome, departamentoId, encontrada }
   })
 }
 

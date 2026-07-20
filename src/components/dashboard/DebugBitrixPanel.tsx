@@ -6,6 +6,10 @@ import {
   lerSnapshotDebug,
   type ChamadaCapturada,
 } from '../../services/debugBitrix'
+import {
+  assinarSnapshotDebug,
+  lerSnapshotMetadataDebug,
+} from '../../services/debugSnapshot'
 import { apiUrlMascarada } from '../../services/bitrixRest'
 import { fonteAtiva, type FonteBitrix } from '../../services/bitrixTransport'
 import classes from './DebugBitrixPanel.module.css'
@@ -22,6 +26,52 @@ function serializar(valor: unknown): string {
   } catch {
     return String(valor)
   }
+}
+
+function formatarRelativo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const minutos = Math.round(diffMs / 60_000)
+  if (minutos < 1) return 'agora mesmo'
+  if (minutos < 60) return `${minutos} min atrás`
+  const horas = Math.round(minutos / 60)
+  if (horas < 24) return `${horas} h atrás`
+  return `${Math.round(horas / 24)} dia(s) atrás`
+}
+
+function SecaoSnapshot() {
+  const metadata = useSyncExternalStore(assinarSnapshotDebug, lerSnapshotMetadataDebug, lerSnapshotMetadataDebug)
+
+  return (
+    <div className={classes.chamada}>
+      <Text fw={700} size="sm" c="white">
+        Snapshot do sync-service (tarefas)
+      </Text>
+      {!metadata ? (
+        <Text className={classes.vazio}>
+          Nenhum snapshot lido ainda nesta sessão. Ele é buscado ao carregar os
+          dados do dashboard.
+        </Text>
+      ) : (
+        <>
+          <Text size="xs" c="dimmed">
+            Sincronizado {formatarRelativo(metadata.syncedAt)} · janela {metadata.windowStart} a{' '}
+            {metadata.windowEnd}
+          </Text>
+          <div className={classes.rotulo}>Tarefas por grupo</div>
+          {metadata.groups.map((g) => (
+            <Group key={g.id} justify="space-between" wrap="nowrap">
+              <Text size="xs" c={g.error ? 'red.4' : 'dimmed'}>
+                {g.nome} (#{g.id}){g.error ? ` · erro: ${g.error}` : ''}
+              </Text>
+              <Text size="xs" fw={700} c="white">
+                {g.taskCount}
+              </Text>
+            </Group>
+          ))}
+        </>
+      )}
+    </div>
+  )
 }
 
 function Chamada({ chamada }: { chamada: ChamadaCapturada }) {
@@ -59,9 +109,11 @@ function Chamada({ chamada }: { chamada: ChamadaCapturada }) {
 
 /**
  * Painel de diagnóstico do Bitrix — ícone flutuante no canto inferior direito,
- * visível SOMENTE em desenvolvimento (import.meta.env.DEV). Mostra o caminho de
- * cada request (método + params), o total e os dados brutos paginados, além de
- * uma amostra das tarefas já resolvidas para o domínio.
+ * visível SOMENTE em desenvolvimento (import.meta.env.DEV). As tarefas em si
+ * vêm de um snapshot pré-sincronizado (sync-service) — a seção de snapshot
+ * mostra quando/quanto foi sincronizado. As chamadas ao vivo restantes (grupos,
+ * departamentos, identificação de usuário) continuam mostrando o rastro
+ * completo de request/páginas abaixo.
  */
 export function DebugBitrixPanel() {
   const [aberto, setAberto] = useState(false)
@@ -82,7 +134,7 @@ export function DebugBitrixPanel() {
                 Diagnóstico Bitrix (dev)
               </Text>
               <Text size="xs" c="dimmed">
-                Fonte: {fonte}
+                Fonte (acesso/departamentos): {fonte}
               </Text>
               {urlMascarada && (
                 <Text size="xs" c="dimmed" style={{ wordBreak: 'break-all' }}>
@@ -101,25 +153,15 @@ export function DebugBitrixPanel() {
           </div>
 
           <div className={classes.corpo}>
+            <SecaoSnapshot />
+
+            <div className={classes.rotulo}>Chamadas ao vivo (grupos, departamentos, usuário)</div>
             {snapshot.chamadas.length === 0 ? (
               <Text className={classes.vazio}>
-                Nenhuma request capturada ainda. As chamadas de listagem aparecem aqui ao carregar
-                ou sincronizar os dados.
+                Nenhuma request capturada ainda.
               </Text>
             ) : (
               snapshot.chamadas.map((chamada) => <Chamada key={chamada.id} chamada={chamada} />)
-            )}
-
-            <div className={classes.rotulo}>Tarefas resolvidas (amostra do domínio)</div>
-            <pre className={classes.bloco}>
-              {snapshot.tarefas.length === 0
-                ? '(nenhuma)'
-                : serializar(snapshot.tarefas.slice(0, 5))}
-            </pre>
-            {snapshot.tarefas.length > 5 && (
-              <Text size="xs" c="dimmed">
-                Mostrando 5 de {snapshot.tarefas.length} tarefas resolvidas.
-              </Text>
             )}
           </div>
         </div>
