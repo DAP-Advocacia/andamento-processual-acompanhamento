@@ -1,6 +1,7 @@
 import { GRUPOS_MONITORADOS } from './bitrixConfig'
 import { bx24Disponivel } from './bitrixSdk'
 import { fonteAtiva, listarTodasPaginas } from './bitrixTransport'
+import { modoMockDevAtivo, projetosMonitoradosMock } from './modoMockDev'
 import type { Projeto, SessaoUsuario } from '../types/domain'
 
 interface GrupoBitrix {
@@ -30,6 +31,15 @@ export async function resolverAcesso(
   idBitrix: number,
   nome: string,
 ): Promise<SessaoUsuario | null> {
+  // Dev sem sync configurado: libera acesso a todos os monitorados sem tocar no
+  // Bitrix (que retornaria 401 sem token). Pareado com o snapshot mock.
+  if (modoMockDevAtivo()) {
+    return {
+      colaborador: { id: idBitrix || 0, nome: nome || 'Desenvolvedor (mock)', ativo: true },
+      projetosPermitidos: projetosMonitoradosMock(),
+    }
+  }
+
   if (bx24Disponivel()) {
     const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.user.groups')
     const temAcessoAMonitorado = grupos.some((g) => GRUPOS_MONITORADOS.includes(Number(g.GROUP_ID)))

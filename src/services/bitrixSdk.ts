@@ -1,5 +1,6 @@
 import type { Bitrix24Result } from '../types/bitrix'
 import { webhookDisponivel } from './bitrixRest'
+import { modoMockDevAtivo } from './modoMockDev'
 import {
   finalizarChamada,
   registrarChamada,
@@ -213,6 +214,12 @@ function buscarPrimeiraPagina<T>(
 }
 
 export async function obterUsuarioBitrixAtual(): Promise<UsuarioBitrixAtual> {
+  // Dev sem sync configurado: usuário de mentira, sem tocar no Bitrix nem exigir
+  // webhook (pareado com o snapshot mock e o bypass de acesso em acessoService).
+  if (modoMockDevAtivo()) {
+    return { idBitrix: 0, nome: 'Desenvolvedor (mock)' }
+  }
+
   if (!bx24Disponivel()) {
     // Fora do iframe do Bitrix não há "usuário atual". Se o webhook estiver
     // configurado, seguimos com um usuário de serviço genérico (o acesso é

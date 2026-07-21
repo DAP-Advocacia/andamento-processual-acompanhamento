@@ -22,10 +22,11 @@
   filter: brightness(1.05);
 }
 
-/* Cobre o ::placeholder dos inputs de texto e o Input.Placeholder renderizado
-   pelo Select/DatePickerInput quando estão vazios. */
-.input::placeholder,
-.input :global(.mantine-InputPlaceholder-placeholder) {
+/* Cobre o placeholder nativo dos inputs de texto e do campo de busca do Select
+   quando vazios (o Mantine usa o próprio ::placeholder do <input>, não um
+   elemento .mantine-InputPlaceholder-placeholder — o seletor antigo nunca
+   casava com nada). */
+.input::placeholder {
   color: var(--mantine-color-text);
   opacity: 0.55;
 }
@@ -39,4 +40,26 @@
   color: var(--mantine-color-text);
   opacity: 0.75;
   transition: color 0.25s ease;
+}
+
+/* Dropdown do Select (Combobox renderizado em portal): sem isto ele herda o
+   fundo padrão do Mantine, que pode ficar sem contraste com o texto no tema
+   custom — dando a impressão de que o Select "não abre" e só mostra o campo
+   de busca (sintoma visto no Fechado por/Responsável, ambos searchable). */
+.dropdown {
+  background-color: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+}
+
+.option {
+  color: var(--mantine-color-text);
+}
+
+.option[data-combobox-selected] {
+  background-color: var(--mantine-color-dourado-6);
+  color: var(--mantine-color-white);
+}
+
+.option[data-combobox-active]:not([data-combobox-selected]) {
+  background-color: var(--superficie-borda);
 }

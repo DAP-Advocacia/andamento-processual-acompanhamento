@@ -3,7 +3,6 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
-import { EquipesResolvidas } from '../components/dashboard/EquipesResolvidas'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
@@ -12,13 +11,10 @@ import {
   obterMetricasFiltradas,
   obterMetricasPorSetorFiltradas,
   obterPacotesAtendimento,
-  resolverEquipesInformadas,
   sincronizarComBitrix,
 } from '../services/dashboardService'
-import { fonteAtiva } from '../services/bitrixTransport'
 import {
   filtrosVazios,
-  type EquipeResolvida,
   type FiltrosDashboard,
   type MetricasPorSetor,
   type MetricasTarefas,
@@ -33,7 +29,6 @@ export function DashboardPage() {
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
   const [metricasPorSetor, setMetricasPorSetor] = useState<MetricasPorSetor[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
-  const [equipesResolvidas, setEquipesResolvidas] = useState<EquipeResolvida[]>([])
   const [erroDados, setErroDados] = useState<string | null>(null)
   const [sincronizando, setSincronizando] = useState(false)
 
@@ -61,23 +56,6 @@ export function DashboardPage() {
     }
   }, [estado, filtros, projetosPermitidos])
 
-  // Resolução das equipes informadas × departamentos do Bitrix: independe dos
-  // filtros, então carrega uma vez quando a sessão fica pronta.
-  useEffect(() => {
-    if (estado !== 'ok') return
-    let cancelado = false
-    resolverEquipesInformadas()
-      .then((resolvidas) => {
-        if (!cancelado) setEquipesResolvidas(resolvidas)
-      })
-      .catch(() => {
-        // Erro aqui não é fatal para os gráficos; o painel de equipes só não aparece.
-      })
-    return () => {
-      cancelado = true
-    }
-  }, [estado])
-
   function aoMudarFiltros(novosFiltros: FiltrosDashboard) {
     setFiltros(novosFiltros)
   }
@@ -96,7 +74,6 @@ export function DashboardPage() {
       setMetricas(novasMetricas)
       setMetricasPorSetor(novasMetricasPorSetor)
       setPacotes(novosPacotes)
-      setEquipesResolvidas(await resolverEquipesInformadas())
     } catch (erro) {
       setErroDados(erro instanceof Error ? erro.message : 'Erro ao sincronizar com o Bitrix.')
     } finally {
@@ -140,6 +117,12 @@ export function DashboardPage() {
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
           ) : (
             <>
+              <FiltrosPainel
+                filtros={filtros}
+                onChange={aoMudarFiltros}
+                projetosPermitidos={projetosPermitidos}
+              />
+
               <MetricasCards
                 titulo="Métricas"
                 metricas={metricas}
@@ -148,20 +131,11 @@ export function DashboardPage() {
                 sincronizando={sincronizando}
               />
 
-              <FiltrosPainel
-                filtros={filtros}
-                onChange={aoMudarFiltros}
-                projetosPermitidos={projetosPermitidos}
-              />
-
               <div>
                 <Title order={3} mb="md">
                   Inteligência — visão por equipe
                 </Title>
                 <Stack gap="md">
-                  {equipesResolvidas.length > 0 && (
-                    <EquipesResolvidas equipes={equipesResolvidas} fonte={fonteAtiva()} />
-                  )}
                   {pacotes && <GraficosInteligencia pacotes={pacotes} />}
                 </Stack>
               </div>

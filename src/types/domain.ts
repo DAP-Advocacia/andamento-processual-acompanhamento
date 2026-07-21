@@ -57,14 +57,16 @@ export interface Tarefa {
   responsavelNome: string | null
   prioridade: PrioridadeTarefa
   /**
-   * Responsável pelo atendimento do cliente — vem do campo customizado
-   * UF_CRM_20_1780943729 do card, distinto do responsável nativo da tarefa.
-   * É o critério de agrupamento da tela de inteligência.
+   * Responsável pelo atendimento do cliente — é o único participante
+   * (accomplice) da tarefa, distinto do responsável nativo. Critério de
+   * agrupamento da tela de inteligência. Sem participante → "Indefinido".
    */
   responsavelAtendimentoId: number | null
   responsavelAtendimentoNome: string | null
   /** Equipe (departamento) do responsável pelo atendimento, ou "indefinido". */
   equipeAtendimento: EquipeAtendimento
+  /** UF (sigla de 2 letras) do processo, normalizada do campo nativo da tarefa. */
+  estadoUf: string | null
 }
 
 /**
@@ -81,12 +83,16 @@ export const EQUIPES_ATENDIMENTO = [
 
 export type EquipeAtendimento = (typeof EQUIPES_ATENDIMENTO)[number] | 'indefinido'
 
-/** ID do departamento (Bitrix24) de cada equipe de atendimento. */
+/**
+ * ID do departamento (Bitrix24) de cada equipe de atendimento — espelha
+ * DEPARTAMENTO_ID_POR_EQUIPE no worker (app/config.py). IDs confirmados ao vivo
+ * via department.get (os antigos 782/784/862/864 não eram departamentos válidos).
+ */
 export const DEPARTAMENTO_ID_POR_EQUIPE: Record<(typeof EQUIPES_ATENDIMENTO)[number], number> = {
-  'Cinthia Filgueiras': 782,
-  'Simone Freitas': 784,
-  'Quézia Karen': 864,
-  'Lorena Pontes': 862,
+  'Cinthia Filgueiras': 1250,
+  'Simone Freitas': 1252,
+  'Quézia Karen': 1418,
+  'Lorena Pontes': 1416,
 }
 
 /**
@@ -173,6 +179,8 @@ export interface FiltrosDashboard {
   fechadoPorId: number | null
   responsavelId: number | null
   prioridade: PrioridadeTarefa | null
+  /** UF (sigla) selecionada, ou null para todas. */
+  estado: string | null
 }
 
 /** Janela padrão de busca: evita baixar o histórico inteiro (grupos monitorados somam centenas de milhares de tarefas). */
@@ -195,6 +203,7 @@ export function filtrosVazios(agora: Date): FiltrosDashboard {
     fechadoPorId: null,
     responsavelId: null,
     prioridade: null,
+    estado: null,
   }
 }
 

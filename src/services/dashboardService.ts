@@ -1,5 +1,6 @@
 import { listarTodasPaginas } from './bitrixTransport'
 import { registrarSnapshotMetadata } from './debugSnapshot'
+import { modoMockDevAtivo } from './modoMockDev'
 import {
   aplicarFiltros,
   calcularMetricas,
@@ -68,6 +69,22 @@ interface SnapshotMetadata {
 async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
   const base = baseSyncApiUrl()
   if (!base) {
+    // Em dev, sem VITE_SYNC_API_URL configurado, cai num snapshot mock com
+    // dados reais já resolvidos (para validar a tela sem depender da VPS).
+    // O arquivo vive em public/ (fora do grafo de build do Vite) e é buscado
+    // via fetch — NUNCA um `import()` estático/dinâmico dele, que o Rollup
+    // sempre emite como chunk no dist independente de branch condicional (já
+    // vazou uma vez assim: verificar `npm run build && ls dist/assets` não
+    // deve listar nada com "snapshot-mock" antes de confiar nisto de novo).
+    if (modoMockDevAtivo()) {
+      const resposta = await fetch('/snapshot-mock.json')
+      if (!resposta.ok) {
+        throw new Error('Snapshot mock não encontrado em public/snapshot-mock.json.')
+      }
+      const mock = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
+      registrarSnapshotMetadata(mock.metadata)
+      return mock.tarefas
+    }
     throw new Error(
       'Serviço de sincronização não configurado. Defina VITE_SYNC_API_URL apontando para o sync-service.',
     )
@@ -159,6 +176,16 @@ export async function obterPacotesAtendimento(
  * dados exibido junto aos gráficos.
  */
 export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
+  // Modo mock dev: não bate no Bitrix (department.get daria 401 sem token);
+  // assume os 4 departamentos como encontrados (IDs já validados ao vivo).
+  if (modoMockDevAtivo()) {
+    return EQUIPES_ATENDIMENTO.map((nome) => ({
+      nome,
+      departamentoId: DEPARTAMENTO_ID_POR_EQUIPE[nome],
+      encontrada: true,
+    }))
+  }
+
   const departamentos = await obterDepartamentosBitrix()
 
   return EQUIPES_ATENDIMENTO.map((nome) => {
@@ -178,6 +205,20 @@ export async function listarSetoresDisponiveis(
   const setores = new Set<string>()
   filtradas.forEach((t) => t.fechadoPorDepartamentos.forEach((d) => setores.add(d)))
   return Array.from(setores).sort((a, b) => a.localeCompare(b))
+}
+
+/** Estados (UF) presentes nos dados, populados a partir dos demais filtros ativos. */
+export async function listarEstadosDisponiveis(
+  filtrosSemEstado: Omit<FiltrosDashboard, 'estado'>,
+  projetosPermitidos: Projeto[],
+): Promise<string[]> {
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  const filtradas = aplicarFiltros(tarefas, { ...filtrosSemEstado, estado: null })
+  const estados = new Set<string>()
+  filtradas.forEach((t) => {
+    if (t.estadoUf) estados.add(t.estadoUf)
+  })
+  return Array.from(estados).sort((a, b) => a.localeCompare(b))
 }
 
 /** Colaboradores (que fecharam tarefas) populados a partir dos demais filtros ativos. */

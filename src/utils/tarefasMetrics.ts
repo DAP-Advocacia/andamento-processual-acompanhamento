@@ -74,6 +74,7 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     if (filtros.fechadoPorId !== null && tarefa.fechadoPorId !== filtros.fechadoPorId) return false
     if (filtros.responsavelId !== null && tarefa.responsavelId !== filtros.responsavelId) return false
     if (filtros.prioridade !== null && tarefa.prioridade !== filtros.prioridade) return false
+    if (filtros.estado !== null && tarefa.estadoUf !== filtros.estado) return false
 
     return true
   })
