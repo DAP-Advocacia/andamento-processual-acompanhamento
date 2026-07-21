@@ -9,6 +9,7 @@ import {
   type InteligenciaDados,
   type InteligenciaEquipe,
   type MetricasPorSetor,
+  type MetricasPorEquipe,
   type MetricasTarefas,
   type PacoteAtendimento,
   type PontoTendenciaMensal,
@@ -85,21 +86,24 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     // responsável..." que aparecem nos rankings quando o dado não existe.
     if (filtros.ocultarIndefinidos) {
       if (tarefa.equipeAtendimento === 'indefinido') return false
-      if (tarefa.fechadoPorId === null) return false
       if (tarefa.responsavelAtendimentoId === null) return false
+      if (tarefaEstaConcluida(tarefa) && tarefa.fechadoPorId === null) return false
     }
     // Cobre quem fecha tarefas em um grupo monitorado sem pertencer a nenhum
     // dos 4 departamentos de Andamento Processual (ex.: Victoria Persi) — não é
     // "indefinido" (tem nome/departamento), só não é do Andamento Processual.
     // .trim() porque o Bitrix retorna ao menos um desses nomes com espaço em
     // branco à frente (confirmado ao vivo: " Andamento Simone Freitas").
-    if (
-      filtros.ocultarForaDasEquipes &&
-      !tarefa.fechadoPorDepartamentos.some((d) =>
-        (NOMES_DEPARTAMENTO_EQUIPES as readonly string[]).includes(d.trim()),
-      )
-    ) {
-      return false
+    if (filtros.ocultarForaDasEquipes) {
+      if (tarefa.equipeAtendimento === 'indefinido') return false
+      if (
+        tarefa.fechadoPorDepartamentos.length > 0 &&
+        !tarefa.fechadoPorDepartamentos.some((d) =>
+          (NOMES_DEPARTAMENTO_EQUIPES as readonly string[]).includes(d.trim()),
+        )
+      ) {
+        return false
+      }
     }
 
     return true
@@ -222,8 +226,9 @@ export function calcularInteligencia(pacotes: PacoteAtendimento[]): Inteligencia
   return { porEquipe, topResponsaveis, topFechadoPor, porUf, urgencia, tendenciaMensal, totalCards }
 }
 
-/** Acumula o "fechado por" (campo customizado) de um card no agregado. */
+/** Acumula o "fechado por" de um card no agregado (apenas tarefas concluídas/fechadas). */
 function acumularFechadoPor(agg: Map<string, VolumeFechadoPor>, card: Tarefa): void {
+  if (!tarefaEstaConcluida(card) && card.fechadoPorId === null) return
   const chave = card.fechadoPorId === null ? 'sem-fechado-por' : String(card.fechadoPorId)
   const existente = agg.get(chave)
   if (existente) {
@@ -356,3 +361,15 @@ export function calcularMetricasPorSetor(tarefas: Tarefa[]): MetricasPorSetor[] 
     .map(([setor, tarefasDoSetor]) => ({ setor, metricas: calcularMetricas(tarefasDoSetor) }))
     .sort((a, b) => a.setor.localeCompare(b.setor))
 }
+
+/** Agrupa as tarefas pelas 4 equipes de atendimento conhecidas e calcula as métricas de cada uma. */
+export function calcularMetricasPorEquipe(tarefas: Tarefa[]): MetricasPorEquipe[] {
+  return EQUIPES_ATENDIMENTO.map((equipe) => {
+    const tarefasDaEquipe = tarefas.filter((t) => t.equipeAtendimento === equipe)
+    return {
+      equipe,
+      metricas: calcularMetricas(tarefasDaEquipe),
+    }
+  })
+}
+

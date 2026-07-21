@@ -1,15 +1,13 @@
 import { Group, Skeleton, Text } from '@mantine/core'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import type { MetricasPorSetor, MetricasTarefas } from '../../types/domain'
+import type { MetricasPorEquipe, MetricasTarefas } from '../../types/domain'
 import classes from './MetricasCards.module.css'
 
 interface MetricasCardsProps {
   titulo: string
   metricas: MetricasTarefas | null
-  metricasPorSetor: MetricasPorSetor[]
-  aoSincronizar: () => void
-  sincronizando: boolean
+  metricasPorEquipe: MetricasPorEquipe[]
 }
 
 function montarStats(metricas: MetricasTarefas) {
@@ -50,18 +48,16 @@ function montarStats(metricas: MetricasTarefas) {
 export function MetricasCards({
   titulo,
   metricas,
-  metricasPorSetor,
-  aoSincronizar,
-  sincronizando,
+  metricasPorEquipe,
 }: MetricasCardsProps) {
   const [grupoAtivo, setGrupoAtivo] = useState(0)
   const [direcao, setDirecao] = useState(1)
 
-  const totalGrupos = 1 + metricasPorSetor.length
+  const totalGrupos = 1 + metricasPorEquipe.length
   const grupo = Math.min(grupoAtivo, totalGrupos - 1)
 
-  const tituloGrupo = grupo === 0 ? titulo : `Métricas — ${metricasPorSetor[grupo - 1].setor}`
-  const metricasDoGrupo = grupo === 0 ? metricas : metricasPorSetor[grupo - 1].metricas
+  const tituloGrupo = grupo === 0 ? titulo : `Métricas — Equipe ${metricasPorEquipe[grupo - 1].equipe}`
+  const metricasDoGrupo = grupo === 0 ? metricas : metricasPorEquipe[grupo - 1].metricas
   const stats = metricasDoGrupo ? montarStats(metricasDoGrupo) : []
 
   function irParaAnterior() {
@@ -80,31 +76,6 @@ export function MetricasCards({
         <Text fw={600} className={classes.tituloGrupo}>
           {tituloGrupo}
         </Text>
-
-        <button
-          type="button"
-          className={classes.syncControl}
-          aria-label="Sincronizar dados do Bitrix"
-          disabled={sincronizando}
-          onClick={aoSincronizar}
-        >
-          <svg
-            className={sincronizando ? classes.syncGirando : undefined}
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" />
-            <path d="M3 21v-5h5" />
-          </svg>
-        </button>
       </Group>
 
       <div className={classes.carrossel}>

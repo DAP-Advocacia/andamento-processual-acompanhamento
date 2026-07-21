@@ -299,7 +299,7 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
       <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
         <Checkbox
           classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
-          label="Não mostrar indefinidos"
+          label="Ocultar dados indefinidos"
           checked={filtros.ocultarIndefinidos}
           onChange={(evento) =>
             onChange({ ...filtros, ocultarIndefinidos: evento.currentTarget.checked })

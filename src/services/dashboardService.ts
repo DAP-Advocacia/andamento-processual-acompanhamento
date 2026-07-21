@@ -5,6 +5,7 @@ import {
   aplicarFiltros,
   calcularMetricas,
   calcularMetricasPorSetor,
+  calcularMetricasPorEquipe,
   empacotarPorAtendimento,
 } from '../utils/tarefasMetrics'
 import {
@@ -13,6 +14,7 @@ import {
   type EquipeResolvida,
   type FiltrosDashboard,
   type MetricasPorSetor,
+  type MetricasPorEquipe,
   type MetricasTarefas,
   type PacoteAtendimento,
   type Projeto,
@@ -83,7 +85,18 @@ async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
       }
       const mock = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
       registrarSnapshotMetadata(mock.metadata)
-      return mock.tarefas
+
+      // Ajusta dinamicamente as datas do mock em relação à data atual para ter tarefas
+      // em andamento e com risco de atraso em ambiente de desenvolvimento (mock offline).
+      const agora = new Date()
+      const maxMockTime = Math.max(...mock.tarefas.map((t) => new Date(t.prazoFinal).getTime()))
+      const targetMaxTime = agora.getTime() + 20 * 24 * 60 * 60 * 1000
+      const deltaMs = targetMaxTime - maxMockTime
+
+      return mock.tarefas.map((t) => ({
+        ...t,
+        prazoFinal: new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString(),
+      }))
     }
     throw new Error(
       'Serviço de sincronização não configurado. Defina VITE_SYNC_API_URL apontando para o sync-service.',
@@ -154,6 +167,14 @@ export async function obterMetricasPorSetorFiltradas(
 ): Promise<MetricasPorSetor[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
   return calcularMetricasPorSetor(aplicarFiltros(tarefas, filtros))
+}
+
+export async function obterMetricasPorEquipeFiltradas(
+  filtros: FiltrosDashboard,
+  projetosPermitidos: Projeto[],
+): Promise<MetricasPorEquipe[]> {
+  const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
+  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros))
 }
 
 /**

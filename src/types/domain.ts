@@ -256,7 +256,7 @@ export function filtrosVazios(agora: Date): FiltrosDashboard {
   dataInicio.setDate(dataInicio.getDate() - JANELA_PADRAO_DIAS)
   return {
     dataInicio: formatarDataIso(dataInicio),
-    dataFim: formatarDataIso(agora),
+    dataFim: null,
     status: 'todos',
     setor: null,
     projetoId: null,
@@ -282,5 +282,10 @@ export interface MetricasTarefas {
 
 export interface MetricasPorSetor {
   setor: string
+  metricas: MetricasTarefas
+}
+
+export interface MetricasPorEquipe {
+  equipe: EquipeAtendimento
   metricas: MetricasTarefas
 }

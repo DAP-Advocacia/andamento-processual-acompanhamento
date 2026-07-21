@@ -9,14 +9,13 @@ import { MetricasCards } from '../components/dashboard/MetricasCards'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
   obterMetricasFiltradas,
-  obterMetricasPorSetorFiltradas,
+  obterMetricasPorEquipeFiltradas,
   obterPacotesAtendimento,
-  sincronizarComBitrix,
 } from '../services/dashboardService'
 import {
   filtrosVazios,
   type FiltrosDashboard,
-  type MetricasPorSetor,
+  type MetricasPorEquipe,
   type MetricasTarefas,
   type PacoteAtendimento,
 } from '../types/domain'
@@ -27,29 +26,33 @@ export function DashboardPage() {
 
   const [filtros, setFiltros] = useState<FiltrosDashboard>(() => filtrosVazios(new Date()))
   const [metricas, setMetricas] = useState<MetricasTarefas | null>(null)
-  const [metricasPorSetor, setMetricasPorSetor] = useState<MetricasPorSetor[]>([])
+  const [metricasPorEquipe, setMetricasPorEquipe] = useState<MetricasPorEquipe[]>([])
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
   const [erroDados, setErroDados] = useState<string | null>(null)
-  const [sincronizando, setSincronizando] = useState(false)
+  const [carregandoFiltro, setCarregandoFiltro] = useState(false)
 
   useEffect(() => {
     if (estado !== 'ok') return
     let cancelado = false
+    setCarregandoFiltro(true)
     Promise.all([
       obterMetricasFiltradas(filtros, projetosPermitidos),
-      obterMetricasPorSetorFiltradas(filtros, projetosPermitidos),
+      obterMetricasPorEquipeFiltradas(filtros, projetosPermitidos),
       obterPacotesAtendimento(filtros, projetosPermitidos),
     ])
-      .then(([novasMetricas, novasMetricasPorSetor, novosPacotes]) => {
+      .then(([novasMetricas, novasMetricasPorEquipe, novosPacotes]) => {
         if (cancelado) return
         setErroDados(null)
         setMetricas(novasMetricas)
-        setMetricasPorSetor(novasMetricasPorSetor)
+        setMetricasPorEquipe(novasMetricasPorEquipe)
         setPacotes(novosPacotes)
       })
       .catch((erro) => {
         if (cancelado) return
         setErroDados(erro instanceof Error ? erro.message : 'Erro ao carregar dados do Bitrix.')
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoFiltro(false)
       })
     return () => {
       cancelado = true
@@ -58,27 +61,6 @@ export function DashboardPage() {
 
   function aoMudarFiltros(novosFiltros: FiltrosDashboard) {
     setFiltros(novosFiltros)
-  }
-
-  async function aoSincronizar() {
-    if (sincronizando) return
-    setSincronizando(true)
-    try {
-      await sincronizarComBitrix(projetosPermitidos)
-      const [novasMetricas, novasMetricasPorSetor, novosPacotes] = await Promise.all([
-        obterMetricasFiltradas(filtros, projetosPermitidos),
-        obterMetricasPorSetorFiltradas(filtros, projetosPermitidos),
-        obterPacotesAtendimento(filtros, projetosPermitidos),
-      ])
-      setErroDados(null)
-      setMetricas(novasMetricas)
-      setMetricasPorSetor(novasMetricasPorSetor)
-      setPacotes(novosPacotes)
-    } catch (erro) {
-      setErroDados(erro instanceof Error ? erro.message : 'Erro ao sincronizar com o Bitrix.')
-    } finally {
-      setSincronizando(false)
-    }
   }
 
   let conteudo: ReactNode
@@ -124,11 +106,9 @@ export function DashboardPage() {
               />
 
               <MetricasCards
-                titulo="Métricas"
+                titulo="Métricas Gerais"
                 metricas={metricas}
-                metricasPorSetor={metricasPorSetor}
-                aoSincronizar={aoSincronizar}
-                sincronizando={sincronizando}
+                metricasPorEquipe={metricasPorEquipe}
               />
 
               <div>
@@ -148,9 +128,11 @@ export function DashboardPage() {
 
   return (
     <div className={classes.page}>
+      {carregandoFiltro && <div className={classes.loadingBar} />}
       <ThemeToggle />
       {conteudo}
       <DebugBitrixPanel />
     </div>
   )
 }
+
