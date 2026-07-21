@@ -96,6 +96,20 @@ export const DEPARTAMENTO_ID_POR_EQUIPE: Record<(typeof EQUIPES_ATENDIMENTO)[num
 }
 
 /**
+ * Nomes (não IDs) dos 4 departamentos das equipes, confirmados ao vivo via
+ * department.get — usados para checar `fechadoPorDepartamentos` (que o worker
+ * grava como nome, não ID). Ex.: Victoria Persi fecha tarefas nos grupos
+ * monitorados mas não pertence a nenhum destes departamentos — o checkbox
+ * "ocultar fora das equipes" usa esta lista para filtrá-la fora do "Fechado por".
+ */
+export const NOMES_DEPARTAMENTO_EQUIPES = [
+  'Andamento Cinthia Filgueiras',
+  'Andamento Simone Freitas',
+  'Andamento Quézia Karen',
+  'Andamento Lorena Pontes',
+] as const
+
+/**
  * "Pacote" da tela de inteligência: todos os cards atribuídos a um mesmo
  * responsável pelo atendimento, já classificados na equipe dele.
  */
@@ -137,6 +151,40 @@ export interface VolumeFechadoPor {
   total: number
 }
 
+/** Volume de cards por UF (estado), para o ranking geográfico. */
+export interface VolumePorUf {
+  uf: string
+  total: number
+}
+
+/**
+ * Contagem de cards por faixa de urgência (dias até o vencimento). Cards já
+ * concluídos ou adiados não entram em nenhuma faixa — só quem ainda pode
+ * vencer/atrasar é urgência. "vencidas" cobre quem já passou do prazo.
+ */
+export interface FaixasUrgencia {
+  vencidas: number
+  ateTresDias: number
+  quatroASeteDias: number
+  oitoAQuinzeDias: number
+  maisDeQuinzeDias: number
+}
+
+/**
+ * Um ponto da série mensal (por mês de prazoFinal): total concluído, e — das
+ * concluídas — a % que terminou depois do prazo (finalizadoEm > prazoFinal).
+ * É pontualidade histórica de entrega, não urgência atual (não depende de
+ * "agora": um mês fechado no passado não satura em 100%).
+ */
+export interface PontoTendenciaMensal {
+  /** Chave "AAAA-MM" (ordenável como string). */
+  mes: string
+  /** Rótulo curto para o eixo (ex.: "jan/26"). */
+  label: string
+  concluidas: number
+  taxaAtraso: number
+}
+
 /**
  * Modelo de dados consolidado que alimenta os gráficos da tela de inteligência.
  * Derivado dos pacotes já filtrados — recalculado a cada mudança de filtro.
@@ -145,6 +193,9 @@ export interface InteligenciaDados {
   porEquipe: InteligenciaEquipe[]
   topResponsaveis: VolumeResponsavel[]
   topFechadoPor: VolumeFechadoPor[]
+  porUf: VolumePorUf[]
+  urgencia: FaixasUrgencia
+  tendenciaMensal: PontoTendenciaMensal[]
   totalCards: number
 }
 
@@ -181,6 +232,15 @@ export interface FiltrosDashboard {
   prioridade: PrioridadeTarefa | null
   /** UF (sigla) selecionada, ou null para todas. */
   estado: string | null
+  /** Quando true, exclui cards cuja equipeAtendimento é "indefinido". */
+  ocultarIndefinidos: boolean
+  /**
+   * Quando true, exclui cards cujo "fechado por" não pertence a nenhum dos 4
+   * departamentos das equipes (NOMES_DEPARTAMENTO_EQUIPES) — cobre o caso de
+   * alguém fora do Andamento Processual (ex.: Victoria Persi) fechar uma
+   * tarefa dentro de um grupo monitorado.
+   */
+  ocultarForaDasEquipes: boolean
 }
 
 /** Janela padrão de busca: evita baixar o histórico inteiro (grupos monitorados somam centenas de milhares de tarefas). */
@@ -204,6 +264,8 @@ export function filtrosVazios(agora: Date): FiltrosDashboard {
     responsavelId: null,
     prioridade: null,
     estado: null,
+    ocultarIndefinidos: false,
+    ocultarForaDasEquipes: false,
   }
 }
 

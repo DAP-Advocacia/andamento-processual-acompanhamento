@@ -1,16 +1,20 @@
 import {
   EQUIPES_ATENDIMENTO,
+  NOMES_DEPARTAMENTO_EQUIPES,
   STATUS_CONCLUIDO,
   type ContagemSituacao,
   type EquipeAtendimento,
+  type FaixasUrgencia,
   type FiltrosDashboard,
   type InteligenciaDados,
   type InteligenciaEquipe,
   type MetricasPorSetor,
   type MetricasTarefas,
   type PacoteAtendimento,
+  type PontoTendenciaMensal,
   type Tarefa,
   type VolumeFechadoPor,
+  type VolumePorUf,
   type VolumeResponsavel,
 } from '../types/domain'
 
@@ -75,6 +79,28 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
     if (filtros.responsavelId !== null && tarefa.responsavelId !== filtros.responsavelId) return false
     if (filtros.prioridade !== null && tarefa.prioridade !== filtros.prioridade) return false
     if (filtros.estado !== null && tarefa.estadoUf !== filtros.estado) return false
+    // "Indefinidos" cobre as 3 dimensões de identificação não resolvida: equipe
+    // (equipeAtendimento === 'indefinido'), fechado por e responsável pelo
+    // atendimento sem participante (ambos null) — os "Não informado"/"Sem
+    // responsável..." que aparecem nos rankings quando o dado não existe.
+    if (filtros.ocultarIndefinidos) {
+      if (tarefa.equipeAtendimento === 'indefinido') return false
+      if (tarefa.fechadoPorId === null) return false
+      if (tarefa.responsavelAtendimentoId === null) return false
+    }
+    // Cobre quem fecha tarefas em um grupo monitorado sem pertencer a nenhum
+    // dos 4 departamentos de Andamento Processual (ex.: Victoria Persi) — não é
+    // "indefinido" (tem nome/departamento), só não é do Andamento Processual.
+    // .trim() porque o Bitrix retorna ao menos um desses nomes com espaço em
+    // branco à frente (confirmado ao vivo: " Andamento Simone Freitas").
+    if (
+      filtros.ocultarForaDasEquipes &&
+      !tarefa.fechadoPorDepartamentos.some((d) =>
+        (NOMES_DEPARTAMENTO_EQUIPES as readonly string[]).includes(d.trim()),
+      )
+    ) {
+      return false
+    }
 
     return true
   })
@@ -189,7 +215,11 @@ export function calcularInteligencia(pacotes: PacoteAtendimento[]): Inteligencia
     .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
     .slice(0, TOP_FECHADO_POR)
 
-  return { porEquipe, topResponsaveis, topFechadoPor, totalCards }
+  const porUf = calcularVolumePorUf(pacotes)
+  const urgencia = calcularFaixasUrgencia(pacotes, agora)
+  const tendenciaMensal = calcularTendenciaMensal(pacotes, agora)
+
+  return { porEquipe, topResponsaveis, topFechadoPor, porUf, urgencia, tendenciaMensal, totalCards }
 }
 
 /** Acumula o "fechado por" (campo customizado) de um card no agregado. */
@@ -204,6 +234,109 @@ function acumularFechadoPor(agg: Map<string, VolumeFechadoPor>, card: Tarefa): v
     fechadoPorId: card.fechadoPorId,
     nome: card.fechadoPorNome ?? 'Não informado',
     total: 1,
+  })
+}
+
+const TOP_UF = 12
+
+/** Ranking de volume por UF — cards sem UF informada não entram (não há "UF indefinida" a ranquear). */
+function calcularVolumePorUf(pacotes: PacoteAtendimento[]): VolumePorUf[] {
+  const agg = new Map<string, number>()
+  pacotes.forEach((pacote) => {
+    pacote.cards.forEach((card) => {
+      if (!card.estadoUf) return
+      agg.set(card.estadoUf, (agg.get(card.estadoUf) ?? 0) + 1)
+    })
+  })
+  return Array.from(agg.entries())
+    .map(([uf, total]) => ({ uf, total }))
+    .sort((a, b) => b.total - a.total || a.uf.localeCompare(b.uf))
+    .slice(0, TOP_UF)
+}
+
+const TRES_DIAS_MS = 3 * 24 * 60 * 60 * 1000
+const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000
+const QUINZE_DIAS_MS = 15 * 24 * 60 * 60 * 1000
+
+/**
+ * Classifica cards ativos (nem concluídos, nem adiados) em faixas de dias até
+ * o vencimento — transforma o número estático de "vence em breve" numa
+ * distribuição acionável. Cards concluídos/adiados não entram em nenhuma faixa.
+ */
+function calcularFaixasUrgencia(pacotes: PacoteAtendimento[], agora: Date): FaixasUrgencia {
+  const faixas: FaixasUrgencia = {
+    vencidas: 0,
+    ateTresDias: 0,
+    quatroASeteDias: 0,
+    oitoAQuinzeDias: 0,
+    maisDeQuinzeDias: 0,
+  }
+  pacotes.forEach((pacote) => {
+    pacote.cards.forEach((card) => {
+      if (card.status === STATUS_CONCLUIDO || card.status === 6) return
+      const diff = new Date(card.prazoFinal).getTime() - agora.getTime()
+      if (diff < 0) faixas.vencidas += 1
+      else if (diff <= TRES_DIAS_MS) faixas.ateTresDias += 1
+      else if (diff <= SETE_DIAS_MS) faixas.quatroASeteDias += 1
+      else if (diff <= QUINZE_DIAS_MS) faixas.oitoAQuinzeDias += 1
+      else faixas.maisDeQuinzeDias += 1
+    })
+  })
+  return faixas
+}
+
+const MESES_TENDENCIA = 6
+
+function chaveMes(data: Date): string {
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`
+}
+
+function rotuloMes(chave: string): string {
+  const [ano, mes] = chave.split('-').map(Number)
+  const nomes = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+  return `${nomes[mes - 1]}/${String(ano).slice(2)}`
+}
+
+/**
+ * Série dos últimos N meses (por prazoFinal): volume concluído no mês, e —
+ * das tarefas JÁ CONCLUÍDAS com prazo naquele mês — a % que terminou depois do
+ * prazo (finalizadoEm > prazoFinal). Comparar com "agora" faria todo mês
+ * fechado saturar em 100% (qualquer não-concluída de um mês passado está
+ * necessariamente vencida hoje) — por isso a métrica usa a data de conclusão
+ * real, não a data da consulta, e é uma medida histórica de pontualidade de
+ * entrega, não de urgência atual (essa já existe em calcularFaixasUrgencia).
+ */
+function calcularTendenciaMensal(pacotes: PacoteAtendimento[], agora: Date): PontoTendenciaMensal[] {
+  const chaves: string[] = []
+  const cursor = new Date(agora.getFullYear(), agora.getMonth(), 1)
+  for (let i = MESES_TENDENCIA - 1; i >= 0; i--) {
+    const d = new Date(cursor)
+    d.setMonth(d.getMonth() - i)
+    chaves.push(chaveMes(d))
+  }
+
+  const porMes = new Map<string, { concluidas: number; concluidasComAtraso: number }>()
+  chaves.forEach((c) => porMes.set(c, { concluidas: 0, concluidasComAtraso: 0 }))
+
+  pacotes.forEach((pacote) => {
+    pacote.cards.forEach((card) => {
+      if (!tarefaEstaConcluida(card) || !card.finalizadoEm) return
+      const chave = chaveMes(new Date(card.prazoFinal))
+      const bucket = porMes.get(chave)
+      if (!bucket) return // fora da janela de meses considerada
+      bucket.concluidas += 1
+      if (new Date(card.finalizadoEm) > new Date(card.prazoFinal)) bucket.concluidasComAtraso += 1
+    })
+  })
+
+  return chaves.map((chave) => {
+    const bucket = porMes.get(chave)!
+    return {
+      mes: chave,
+      label: rotuloMes(chave),
+      concluidas: bucket.concluidas,
+      taxaAtraso: bucket.concluidas === 0 ? 0 : (bucket.concluidasComAtraso / bucket.concluidas) * 100,
+    }
   })
 }
 

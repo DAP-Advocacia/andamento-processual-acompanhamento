@@ -1,4 +1,4 @@
-import { Grid, Select } from '@mantine/core'
+import { Checkbox, Grid, Select } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { useEffect, useState } from 'react'
 import {
@@ -55,12 +55,25 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     responsavelId,
     prioridade,
     estado,
+    ocultarIndefinidos,
+    ocultarForaDasEquipes,
   } = filtros
 
   useEffect(() => {
     let cancelado = false
     listarSetoresDisponiveis(
-      { dataInicio, dataFim, status, projetoId, fechadoPorId, responsavelId, prioridade, estado },
+      {
+        dataInicio,
+        dataFim,
+        status,
+        projetoId,
+        fechadoPorId,
+        responsavelId,
+        prioridade,
+        estado,
+        ocultarIndefinidos,
+        ocultarForaDasEquipes,
+      },
       projetosPermitidos,
     ).then((setores) => {
       if (!cancelado) setSetoresDisponiveis(setores)
@@ -68,12 +81,35 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     return () => {
       cancelado = true
     }
-  }, [dataInicio, dataFim, status, projetoId, fechadoPorId, responsavelId, prioridade, estado, projetosPermitidos])
+  }, [
+    dataInicio,
+    dataFim,
+    status,
+    projetoId,
+    fechadoPorId,
+    responsavelId,
+    prioridade,
+    estado,
+    ocultarIndefinidos,
+    ocultarForaDasEquipes,
+    projetosPermitidos,
+  ])
 
   useEffect(() => {
     let cancelado = false
     listarColaboradoresDisponiveis(
-      { dataInicio, dataFim, status, setor, projetoId, responsavelId, prioridade, estado },
+      {
+        dataInicio,
+        dataFim,
+        status,
+        setor,
+        projetoId,
+        responsavelId,
+        prioridade,
+        estado,
+        ocultarIndefinidos,
+        ocultarForaDasEquipes,
+      },
       projetosPermitidos,
     ).then((colaboradores) => {
       if (!cancelado) setColaboradoresDisponiveis(colaboradores)
@@ -81,12 +117,35 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     return () => {
       cancelado = true
     }
-  }, [dataInicio, dataFim, status, setor, projetoId, responsavelId, prioridade, estado, projetosPermitidos])
+  }, [
+    dataInicio,
+    dataFim,
+    status,
+    setor,
+    projetoId,
+    responsavelId,
+    prioridade,
+    estado,
+    ocultarIndefinidos,
+    ocultarForaDasEquipes,
+    projetosPermitidos,
+  ])
 
   useEffect(() => {
     let cancelado = false
     listarResponsaveisDisponiveis(
-      { dataInicio, dataFim, status, setor, projetoId, fechadoPorId, prioridade, estado },
+      {
+        dataInicio,
+        dataFim,
+        status,
+        setor,
+        projetoId,
+        fechadoPorId,
+        prioridade,
+        estado,
+        ocultarIndefinidos,
+        ocultarForaDasEquipes,
+      },
       projetosPermitidos,
     ).then((responsaveis) => {
       if (!cancelado) setResponsaveisDisponiveis(responsaveis)
@@ -94,12 +153,35 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     return () => {
       cancelado = true
     }
-  }, [dataInicio, dataFim, status, setor, projetoId, fechadoPorId, prioridade, estado, projetosPermitidos])
+  }, [
+    dataInicio,
+    dataFim,
+    status,
+    setor,
+    projetoId,
+    fechadoPorId,
+    prioridade,
+    estado,
+    ocultarIndefinidos,
+    ocultarForaDasEquipes,
+    projetosPermitidos,
+  ])
 
   useEffect(() => {
     let cancelado = false
     listarEstadosDisponiveis(
-      { dataInicio, dataFim, status, setor, projetoId, fechadoPorId, responsavelId, prioridade },
+      {
+        dataInicio,
+        dataFim,
+        status,
+        setor,
+        projetoId,
+        fechadoPorId,
+        responsavelId,
+        prioridade,
+        ocultarIndefinidos,
+        ocultarForaDasEquipes,
+      },
       projetosPermitidos,
     ).then((estados) => {
       if (!cancelado) setEstadosDisponiveis(estados)
@@ -107,7 +189,19 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
     return () => {
       cancelado = true
     }
-  }, [dataInicio, dataFim, status, setor, projetoId, fechadoPorId, responsavelId, prioridade, projetosPermitidos])
+  }, [
+    dataInicio,
+    dataFim,
+    status,
+    setor,
+    projetoId,
+    fechadoPorId,
+    responsavelId,
+    prioridade,
+    ocultarIndefinidos,
+    ocultarForaDasEquipes,
+    projetosPermitidos,
+  ])
 
   return (
     <Grid align="flex-end">
@@ -200,6 +294,26 @@ export function FiltrosPainel({ filtros, onChange, projetosPermitidos }: Filtros
           onChange={(valor) => onChange({ ...filtros, estado: valor })}
           searchable
           clearable
+        />
+      </Grid.Col>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+        <Checkbox
+          classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
+          label="Não mostrar indefinidos"
+          checked={filtros.ocultarIndefinidos}
+          onChange={(evento) =>
+            onChange({ ...filtros, ocultarIndefinidos: evento.currentTarget.checked })
+          }
+        />
+      </Grid.Col>
+      <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+        <Checkbox
+          classNames={{ input: classes.checkboxInput, label: classes.checkboxLabel }}
+          label="Ocultar quem não é das equipes"
+          checked={filtros.ocultarForaDasEquipes}
+          onChange={(evento) =>
+            onChange({ ...filtros, ocultarForaDasEquipes: evento.currentTarget.checked })
+          }
         />
       </Grid.Col>
 

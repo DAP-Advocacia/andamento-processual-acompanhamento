@@ -63,3 +63,10 @@
 .option[data-combobox-active]:not([data-combobox-selected]) {
   background-color: var(--superficie-borda);
 }
+
+/* Checkbox e seu label inteiro ficam clicáveis com cursor de mão — o Mantine
+   por padrão só marca o quadradinho como pointer, o texto do label não. */
+.checkboxInput,
+.checkboxLabel {
+  cursor: pointer;
+}

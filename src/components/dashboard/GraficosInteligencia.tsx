@@ -6,12 +6,14 @@ import {
   Chart as ChartJS,
   Legend,
   LinearScale,
+  LineElement,
+  PointElement,
   Tooltip,
   type ChartData,
   type ChartOptions,
 } from 'chart.js'
 import { useMemo, useState } from 'react'
-import { Bar, Doughnut } from 'react-chartjs-2'
+import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import {
   EQUIPES_ATENDIMENTO,
   type EquipeAtendimento,
@@ -24,10 +26,32 @@ import { COR_POR_EQUIPE, COR_POR_SITUACAO } from './tarefaApresentacao'
 import classes from './GraficosInteligencia.module.css'
 
 // Registra só os elementos usados (Chart.js é tree-shakeable).
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Legend, Tooltip)
+ChartJS.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Legend,
+  Tooltip,
+)
 
-// Cor única para o gráfico de "Fechado por" (série única, sem semântica de equipe).
+// Cor única para séries de série-única sem semântica de equipe (Fechado por, UF).
 const COR_FECHADO_POR = '#2f6fb0'
+const COR_UF = '#158a6f'
+// Cores das duas séries de tendência mensal — concluídas (positivo) e taxa de
+// atraso (atenção), reaproveitando os tons semânticos já usados em COR_POR_SITUACAO.
+const COR_TENDENCIA_CONCLUIDAS = COR_POR_SITUACAO.concluidas
+const COR_TENDENCIA_ATRASO = COR_POR_SITUACAO.atrasadas
+// Faixas de urgência: gradiente verde->vermelho conforme a proximidade do vencimento.
+const COR_URGENCIA: Record<keyof import('../../types/domain').FaixasUrgencia, string> = {
+  vencidas: '#c0395a',
+  ateTresDias: '#d1685f',
+  quatroASeteDias: '#b8791a',
+  oitoAQuinzeDias: '#8a9a1a',
+  maisDeQuinzeDias: '#158a6f',
+}
 
 /**
  * Cores de chrome do gráfico (texto de eixos/legenda, grade e o "gap" entre
@@ -55,12 +79,29 @@ function coresChrome(scheme: 'light' | 'dark') {
 
 const ORDEM_EQUIPES: EquipeAtendimento[] = [...EQUIPES_ATENDIMENTO, 'indefinido']
 
+/** Rótulo de exibição da equipe — só "indefinido" difere do nome interno (capitalizado). */
+function rotuloEquipe(equipe: EquipeAtendimento): string {
+  return equipe === 'indefinido' ? 'Indefinido' : equipe
+}
+
 // Situações na ordem de empilhamento; rótulo + cor semântica reservada.
 const SITUACOES: Array<{ chave: keyof typeof COR_POR_SITUACAO; label: string }> = [
   { chave: 'noPrazo', label: 'No prazo' },
   { chave: 'adiadas', label: 'Adiadas' },
   { chave: 'concluidas', label: 'Concluídas' },
   { chave: 'atrasadas', label: 'Atrasadas' },
+]
+
+// Faixas de urgência na ordem de mais crítica para mais confortável.
+const FAIXAS_URGENCIA_LABELS: Array<{
+  chave: keyof import('../../types/domain').FaixasUrgencia
+  label: string
+}> = [
+  { chave: 'vencidas', label: 'Vencidas' },
+  { chave: 'ateTresDias', label: 'Até 3 dias' },
+  { chave: 'quatroASeteDias', label: '4 a 7 dias' },
+  { chave: 'oitoAQuinzeDias', label: '8 a 15 dias' },
+  { chave: 'maisDeQuinzeDias', label: 'Mais de 15 dias' },
 ]
 
 interface GraficosInteligenciaProps {
@@ -99,6 +140,11 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
   const opcoesEmpilhado = useMemo(() => montarOpcoesEmpilhado(cores), [cores])
   const opcoesRosca = useMemo(() => montarOpcoesRosca(cores), [cores])
   const opcoesRanking = useMemo(() => montarOpcoesRanking(cores), [cores])
+  const opcoesTendencia = useMemo(() => montarOpcoesTendencia(cores, 'contagem'), [cores])
+  const opcoesTendenciaPercentual = useMemo(
+    () => montarOpcoesTendencia(cores, 'percentual'),
+    [cores],
+  )
 
   // Contagem de cards por equipe (para os rótulos dos ripples) — sempre do total,
   // independente da seleção, para o usuário ver o tamanho de cada equipe.
@@ -128,7 +174,7 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
 
   const empilhado = useMemo<ChartData<'bar'>>(
     () => ({
-      labels: equipes,
+      labels: equipes.map(rotuloEquipe),
       datasets: SITUACOES.map((s) => ({
         label: s.label,
         data: equipes.map(
@@ -147,7 +193,7 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
 
   const distribuicao = useMemo<ChartData<'doughnut'>>(
     () => ({
-      labels: equipes,
+      labels: equipes.map(rotuloEquipe),
       datasets: [
         {
           label: 'Cards',
@@ -195,6 +241,77 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
     [dados],
   )
 
+  const porUf = useMemo<ChartData<'bar'>>(
+    () => ({
+      labels: dados.porUf.map((u) => u.uf),
+      datasets: [
+        {
+          label: 'Cards',
+          data: dados.porUf.map((u) => u.total),
+          backgroundColor: COR_UF,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    }),
+    [dados],
+  )
+
+  const urgencia = useMemo<ChartData<'bar'>>(
+    () => ({
+      labels: FAIXAS_URGENCIA_LABELS.map((f) => f.label),
+      datasets: [
+        {
+          label: 'Cards',
+          data: FAIXAS_URGENCIA_LABELS.map((f) => dados.urgencia[f.chave]),
+          backgroundColor: FAIXAS_URGENCIA_LABELS.map((f) => COR_URGENCIA[f.chave]),
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    }),
+    [dados],
+  )
+
+  // Duas séries em gráficos SEPARADOS (não dual-axis): concluídas é contagem
+  // absoluta, taxa de atraso é percentual — unidades diferentes que não devem
+  // dividir o mesmo par de eixos, mesmo compartilhando o eixo X (mês).
+  const tendenciaConcluidas = useMemo<ChartData<'line'>>(
+    () => ({
+      labels: dados.tendenciaMensal.map((p) => p.label),
+      datasets: [
+        {
+          label: 'Concluídas',
+          data: dados.tendenciaMensal.map((p) => p.concluidas),
+          borderColor: COR_TENDENCIA_CONCLUIDAS,
+          backgroundColor: COR_TENDENCIA_CONCLUIDAS,
+          tension: 0.3,
+          pointRadius: 4,
+          fill: false,
+        },
+      ],
+    }),
+    [dados],
+  )
+
+  const tendenciaAtraso = useMemo<ChartData<'line'>>(
+    () => ({
+      labels: dados.tendenciaMensal.map((p) => p.label),
+      datasets: [
+        {
+          label: 'Taxa de atraso (%)',
+          data: dados.tendenciaMensal.map((p) => Math.round(p.taxaAtraso * 10) / 10),
+          borderColor: COR_TENDENCIA_ATRASO,
+          backgroundColor: COR_TENDENCIA_ATRASO,
+          tension: 0.3,
+          pointRadius: 4,
+          fill: false,
+        },
+      ],
+    }),
+    [dados],
+  )
+
   if (pacotes.length === 0) {
     return (
       <EstadoVazio
@@ -225,7 +342,7 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
                 setEquipeSelecionada((atual) => (atual === equipe ? null : equipe))
               }}
             >
-              {equipe}
+              {rotuloEquipe(equipe)}
               <span className={classes.rippleContagem}>{totaisPorEquipe.get(equipe) ?? 0}</span>
             </button>
           )
@@ -288,6 +405,56 @@ export function GraficosInteligencia({ pacotes }: GraficosInteligenciaProps) {
               <Bar data={fechadoPor} options={opcoesRanking} />
             </div>
           </div>
+
+          <div className={classes.cartao}>
+            <Text className={classes.tituloCartao} fw={700}>
+              Volume por Estado (UF)
+            </Text>
+            <Text className={classes.subtitulo} size="xs">
+              Top {dados.porUf.length} estados por volume de cards; cards sem UF informada não
+              entram no ranking.
+            </Text>
+            <div className={classes.areaGrafico}>
+              <Bar data={porUf} options={opcoesRanking} />
+            </div>
+          </div>
+
+          <div className={classes.cartao}>
+            <Text className={classes.tituloCartao} fw={700}>
+              Urgência por prazo
+            </Text>
+            <Text className={classes.subtitulo} size="xs">
+              Cards ativos (não concluídos, não adiados) por faixa de dias até o vencimento.
+            </Text>
+            <div className={classes.areaGrafico}>
+              <Bar data={urgencia} options={opcoesRanking} />
+            </div>
+          </div>
+
+          <div className={classes.cartao}>
+            <Text className={classes.tituloCartao} fw={700}>
+              Tendência — concluídas por mês
+            </Text>
+            <Text className={classes.subtitulo} size="xs">
+              Volume concluído por mês de prazo, últimos {dados.tendenciaMensal.length} meses.
+            </Text>
+            <div className={classes.areaGrafico}>
+              <Line data={tendenciaConcluidas} options={opcoesTendencia} />
+            </div>
+          </div>
+
+          <div className={classes.cartao}>
+            <Text className={classes.tituloCartao} fw={700}>
+              Tendência — pontualidade na entrega
+            </Text>
+            <Text className={classes.subtitulo} size="xs">
+              Das tarefas concluídas com prazo em cada mês, % que terminou depois do prazo —
+              últimos {dados.tendenciaMensal.length} meses.
+            </Text>
+            <div className={classes.areaGrafico}>
+              <Line data={tendenciaAtraso} options={opcoesTendenciaPercentual} />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -344,6 +511,37 @@ function montarOpcoesRanking(cores: CoresChrome): ChartOptions<'bar'> {
         ticks: { color: cores.texto, precision: 0 },
       },
       y: { grid: { display: false }, ticks: { color: cores.texto } },
+    },
+  }
+}
+
+/**
+ * Um único eixo Y por gráfico (contagem OU percentual, nunca os dois juntos)
+ * — as duas séries de tendência vivem em cards/gráficos separados
+ * propositalmente, para não incorrer no anti-padrão de dual-axis.
+ */
+function montarOpcoesTendencia(
+  cores: CoresChrome,
+  modo: 'contagem' | 'percentual',
+): ChartOptions<'line'> {
+  return {
+    maintainAspectRatio: false,
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: true },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: cores.texto } },
+      y: {
+        beginAtZero: true,
+        max: modo === 'percentual' ? 100 : undefined,
+        grid: { color: cores.grade },
+        ticks:
+          modo === 'percentual'
+            ? { color: cores.texto, callback: (v) => `${v}%` }
+            : { color: cores.texto, precision: 0 },
+      },
     },
   }
 }
