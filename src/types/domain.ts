@@ -232,30 +232,22 @@ export interface FiltrosDashboard {
   prioridade: PrioridadeTarefa | null
   /** UF (sigla) selecionada, ou null para todas. */
   estado: string | null
-  /** Quando true, exclui cards cuja equipeAtendimento é "indefinido". */
   ocultarIndefinidos: boolean
-  /**
-   * Quando true, exclui cards cujo "fechado por" não pertence a nenhum dos 4
-   * departamentos das equipes (NOMES_DEPARTAMENTO_EQUIPES) — cobre o caso de
-   * alguém fora do Andamento Processual (ex.: Victoria Persi) fechar uma
-   * tarefa dentro de um grupo monitorado.
-   */
   ocultarForaDasEquipes: boolean
+  /** Modo de cálculo da taxa de atraso: 'ativas' (divisão pelas pendentes) ou 'total' (divisão pelo volume total). */
+  modoTaxaAtraso: 'ativas' | 'total'
 }
+
+
 
 /** Janela padrão de busca: evita baixar o histórico inteiro (grupos monitorados somam centenas de milhares de tarefas). */
 export const JANELA_PADRAO_DIAS = 90
 
-function formatarDataIso(data: Date): string {
-  return data.toISOString().slice(0, 10)
-}
+/** Filtros vazios sem restrição inicial de data por padrão. */
+export function filtrosVazios(_agora?: Date): FiltrosDashboard {
 
-/** Filtros vazios com a janela padrão de 90 dias (até hoje) já aplicada. */
-export function filtrosVazios(agora: Date): FiltrosDashboard {
-  const dataInicio = new Date(agora)
-  dataInicio.setDate(dataInicio.getDate() - JANELA_PADRAO_DIAS)
   return {
-    dataInicio: formatarDataIso(dataInicio),
+    dataInicio: null,
     dataFim: null,
     status: 'todos',
     setor: null,
@@ -266,8 +258,11 @@ export function filtrosVazios(agora: Date): FiltrosDashboard {
     estado: null,
     ocultarIndefinidos: false,
     ocultarForaDasEquipes: false,
+    modoTaxaAtraso: 'ativas',
   }
 }
+
+
 
 export interface MetricasTarefas {
   total: number

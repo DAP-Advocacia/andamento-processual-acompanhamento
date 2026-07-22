@@ -158,7 +158,7 @@ export async function obterMetricasFiltradas(
   projetosPermitidos: Projeto[],
 ): Promise<MetricasTarefas> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
-  return calcularMetricas(aplicarFiltros(tarefas, filtros))
+  return calcularMetricas(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso)
 }
 
 export async function obterMetricasPorSetorFiltradas(
@@ -174,8 +174,9 @@ export async function obterMetricasPorEquipeFiltradas(
   projetosPermitidos: Projeto[],
 ): Promise<MetricasPorEquipe[]> {
   const tarefas = await carregarTarefasPermitidas(projetosPermitidos)
-  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros))
+  return calcularMetricasPorEquipe(aplicarFiltros(tarefas, filtros), filtros.modoTaxaAtraso)
 }
+
 
 /**
  * Pacotes de atendimento: cada card é agrupado pelo responsável pelo atendimento
@@ -197,9 +198,7 @@ export async function obterPacotesAtendimento(
  * dados exibido junto aos gráficos.
  */
 export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
-  // Modo mock dev: não bate no Bitrix (department.get daria 401 sem token);
-  // assume os 4 departamentos como encontrados (IDs já validados ao vivo).
-  if (modoMockDevAtivo()) {
+  if (modoMockDevAtivo() || baseSyncApiUrl()) {
     return EQUIPES_ATENDIMENTO.map((nome) => ({
       nome,
       departamentoId: DEPARTAMENTO_ID_POR_EQUIPE[nome],
@@ -207,14 +206,23 @@ export async function resolverEquipesInformadas(): Promise<EquipeResolvida[]> {
     }))
   }
 
-  const departamentos = await obterDepartamentosBitrix()
+  try {
+    const departamentos = await obterDepartamentosBitrix()
 
-  return EQUIPES_ATENDIMENTO.map((nome) => {
-    const departamentoId = DEPARTAMENTO_ID_POR_EQUIPE[nome]
-    const encontrada = departamentos.has(departamentoId)
-    return { nome, departamentoId, encontrada }
-  })
+    return EQUIPES_ATENDIMENTO.map((nome) => {
+      const departamentoId = DEPARTAMENTO_ID_POR_EQUIPE[nome]
+      const encontrada = departamentos.has(departamentoId)
+      return { nome, departamentoId, encontrada }
+    })
+  } catch {
+    return EQUIPES_ATENDIMENTO.map((nome) => ({
+      nome,
+      departamentoId: DEPARTAMENTO_ID_POR_EQUIPE[nome],
+      encontrada: true,
+    }))
+  }
 }
+
 
 /** Setores populados a partir dos demais filtros ativos, exceto o próprio setor. */
 export async function listarSetoresDisponiveis(

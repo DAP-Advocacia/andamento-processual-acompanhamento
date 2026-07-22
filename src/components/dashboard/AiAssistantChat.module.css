@@ -1,0 +1,309 @@
+/* Widget do Assistente Flutuante de IA */
+
+.floatingTrigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+  color: var(--mantine-color-dourado-5);
+  box-shadow:
+    0 8px 24px var(--sombra-contraste),
+    0 0 20px rgba(179, 136, 66, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.floatingTrigger:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 12px 32px var(--sombra-contraste),
+    0 0 28px rgba(179, 136, 66, 0.5);
+  border-color: var(--mantine-color-dourado-4);
+  color: var(--mantine-color-dourado-4);
+}
+
+.floatingTrigger:active {
+  transform: scale(0.95);
+}
+
+.chatWidgetContainer {
+  position: fixed;
+  bottom: 92px;
+  right: 24px;
+  z-index: 1000;
+  width: min(550px, calc(100vw - 32px));
+  height: 650px;
+  max-height: calc(100vh - 60px);
+  background-color: var(--superficie);
+  border: 1px solid var(--superficie-borda);
+  border-radius: 20px;
+  box-shadow:
+    0 16px 40px var(--sombra-contraste),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+  animation: surgimentoWidget 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes surgimentoWidget {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--superficie-borda);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.headerTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.headerTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--mantine-color-text);
+  letter-spacing: 0.2px;
+}
+
+.headerBadges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badgeModel {
+  background-color: var(--superficie-borda);
+  color: var(--mantine-color-text);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 12px;
+  opacity: 0.85;
+}
+
+.badgePro {
+  background: linear-gradient(135deg, var(--mantine-color-dourado-6), #8d6b34);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--mantine-color-text);
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.closeButton:hover {
+  opacity: 1;
+  background-color: var(--superficie-borda);
+}
+
+/* Área de mensagens */
+
+.messagesArea {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 460px;
+  min-height: 240px;
+}
+
+
+
+.mensagemBubble {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.userBubble {
+  align-self: flex-end;
+  background-color: var(--mantine-color-dourado-6);
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+}
+
+.assistantBubble {
+  align-self: flex-start;
+  background-color: var(--superficie-borda);
+  color: var(--mantine-color-text);
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+}
+
+.emptyStateText {
+  color: var(--mantine-color-text);
+  opacity: 0.55;
+  font-size: 14px;
+  text-align: center;
+  margin: auto;
+  padding: 16px;
+  line-height: 1.5;
+}
+
+/* Área de Input */
+
+.inputCard {
+  margin: 12px 14px 6px;
+  background-color: rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--superficie-borda);
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+:global([data-mantine-color-scheme='dark']) .inputCard {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.inputCard:focus-within {
+  border-color: var(--mantine-color-dourado-4);
+}
+
+.textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--mantine-color-text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  min-height: 48px;
+  max-height: 100px;
+}
+
+.textarea::placeholder {
+  color: var(--mantine-color-text);
+  opacity: 0.45;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+
+.sendControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.charCounter {
+  font-size: 11px;
+  color: var(--mantine-color-text);
+  opacity: 0.45;
+}
+
+.sendButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: var(--mantine-color-dourado-6);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.sendButton:hover:not(:disabled) {
+  transform: scale(1.06);
+  background-color: var(--mantine-color-dourado-5);
+  box-shadow: 0 4px 12px rgba(179, 136, 66, 0.4);
+}
+
+.sendButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Footer informacional */
+
+.footerInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 12px;
+  font-size: 11px;
+  color: var(--mantine-color-text);
+  opacity: 0.55;
+}
+
+.kbd {
+  background-color: var(--superficie-borda);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 10px;
+}
+
+.systemStatus {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

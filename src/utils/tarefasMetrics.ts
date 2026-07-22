@@ -31,7 +31,10 @@ export function tarefaNoPrazo(tarefa: Tarefa, agora: Date): boolean {
   return tarefa.status < STATUS_CONCLUIDO && new Date(tarefa.prazoFinal) >= agora
 }
 
-export function calcularMetricas(tarefas: Tarefa[]): MetricasTarefas {
+export function calcularMetricas(
+  tarefas: Tarefa[],
+  modoTaxaAtraso: 'ativas' | 'total' = 'ativas',
+): MetricasTarefas {
   const total = tarefas.length
   const concluidas = tarefas.filter(tarefaEstaConcluida).length
   const agora = new Date()
@@ -39,24 +42,39 @@ export function calcularMetricas(tarefas: Tarefa[]): MetricasTarefas {
   const eficiencia = total === 0 ? 0 : (concluidas / total) * 100
 
   const tresDiasEmMs = 3 * 24 * 60 * 60 * 1000
-  const vencemEmBreve = tarefas.filter(t => {
+  const vencemEmBreve = tarefas.filter((t) => {
     if (t.status >= STATUS_CONCLUIDO) return false
     const prazo = new Date(t.prazoFinal).getTime()
     const diff = prazo - agora.getTime()
     return diff >= 0 && diff <= tresDiasEmMs
   }).length
 
-  const aguardandoRevisao = tarefas.filter(t => t.status === 4).length
-  const emAndamento = tarefas.filter(t => tarefaNoPrazo(t, agora)).length
-  
-  const ativas = total - concluidas - tarefas.filter(t => t.status === 6).length
-  const taxaAtraso = ativas === 0 ? 0 : (atrasadas / ativas) * 100
+  const aguardandoRevisao = tarefas.filter((t) => t.status === 4).length
+  const emAndamento = tarefas.filter((t) => tarefaNoPrazo(t, agora)).length
 
-  return { 
-    total, concluidas, atrasadas, eficiencia, 
-    vencemEmBreve, aguardandoRevisao, emAndamento, taxaAtraso 
+  const ativas = total - concluidas - tarefas.filter((t) => t.status === 6).length
+
+  const taxaAtraso =
+    modoTaxaAtraso === 'total'
+      ? total === 0
+        ? 0
+        : (atrasadas / total) * 100
+      : ativas === 0
+        ? 0
+        : (atrasadas / ativas) * 100
+
+  return {
+    total,
+    concluidas,
+    atrasadas,
+    eficiencia,
+    vencemEmBreve,
+    aguardandoRevisao,
+    emAndamento,
+    taxaAtraso,
   }
 }
+
 
 export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Tarefa[] {
   const agora = new Date()
@@ -68,9 +86,22 @@ export function aplicarFiltros(tarefas: Tarefa[], filtros: FiltrosDashboard): Ta
 
   return tarefas.filter((tarefa) => {
     const prazo = new Date(tarefa.prazoFinal)
+    const finalizado = tarefa.finalizadoEm ? new Date(tarefa.finalizadoEm) : null
 
-    if (dataInicioLimite && prazo < dataInicioLimite) return false
-    if (dataFimLimite && prazo > dataFimLimite) return false
+
+
+    if (dataInicioLimite) {
+      const prazoValido = prazo >= dataInicioLimite
+      const finalizadoValido = finalizado !== null && finalizado >= dataInicioLimite
+      if (!prazoValido && !finalizadoValido) return false
+    }
+
+    if (dataFimLimite) {
+      const prazoValido = prazo <= dataFimLimite
+      const finalizadoValido = finalizado !== null && finalizado <= dataFimLimite
+      if (!prazoValido && !finalizadoValido) return false
+    }
+
     if (filtros.status === 'concluido' && !tarefaEstaConcluida(tarefa)) return false
     if (filtros.status === 'atrasado' && !tarefaEstaAtrasada(tarefa, agora)) return false
     if (filtros.status === 'no_prazo' && !tarefaNoPrazo(tarefa, agora)) return false
@@ -363,13 +394,17 @@ export function calcularMetricasPorSetor(tarefas: Tarefa[]): MetricasPorSetor[] 
 }
 
 /** Agrupa as tarefas pelas 4 equipes de atendimento conhecidas e calcula as métricas de cada uma. */
-export function calcularMetricasPorEquipe(tarefas: Tarefa[]): MetricasPorEquipe[] {
+export function calcularMetricasPorEquipe(
+  tarefas: Tarefa[],
+  modoTaxaAtraso: 'ativas' | 'total' = 'ativas',
+): MetricasPorEquipe[] {
   return EQUIPES_ATENDIMENTO.map((equipe) => {
     const tarefasDaEquipe = tarefas.filter((t) => t.equipeAtendimento === equipe)
     return {
       equipe,
-      metricas: calcularMetricas(tarefasDaEquipe),
+      metricas: calcularMetricas(tarefasDaEquipe, modoTaxaAtraso),
     }
   })
 }
+
 

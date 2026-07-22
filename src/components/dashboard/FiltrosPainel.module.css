@@ -70,3 +70,72 @@
 .checkboxLabel {
   cursor: pointer;
 }
+
+.rodapeFiltros {
+  padding-top: 6px;
+}
+
+/* Botão de limpar filtros com efeito Ripple de ondulação */
+.btnLimparRipple {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  height: 38px;
+  border-radius: var(--mantine-radius-lg);
+  border: 1px solid var(--superficie-borda);
+  background-color: var(--superficie);
+  color: var(--mantine-color-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.1s ease;
+}
+
+.btnLimparRipple:hover {
+  background-color: var(--superficie-borda);
+  border-color: var(--mantine-color-dourado-4);
+  color: var(--mantine-color-dourado-4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btnLimparRipple:active {
+  transform: scale(0.97);
+}
+
+.btnLimparRipple svg {
+  transition: transform 0.3s ease;
+}
+
+.btnLimparRipple:hover svg {
+  transform: rotate(-15deg);
+}
+
+.rippleEffect {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin-left: -10px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.45);
+  transform: scale(0);
+  pointer-events: none;
+  animation: animacaoRipple 600ms cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+
+@keyframes animacaoRipple {
+  to {
+    transform: scale(12);
+    opacity: 0;
+  }
+}
+

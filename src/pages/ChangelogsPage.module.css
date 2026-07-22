@@ -1,0 +1,128 @@
+.page {
+  min-height: 100vh;
+  background-color: var(--superficie-base, #11141a);
+  color: var(--texto-primario, #f1f3f5);
+  padding: 32px 24px;
+  font-family: inherit;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.headerBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.08));
+}
+
+.btnVoltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--mantine-color-dourado-4, #cba556);
+  border: 1px solid rgba(203, 165, 86, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btnVoltar:hover {
+  background: rgba(203, 165, 86, 0.15);
+  border-color: var(--mantine-color-dourado-4, #cba556);
+  transform: translateX(-2px);
+}
+
+.cardSecao {
+  background-color: var(--superficie-card, #1a1e26);
+  border: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.tituloSecao {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--mantine-color-dourado-4, #cba556);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tabelaMetricas {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.tabelaMetricas th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mantine-color-dourado-4, #cba556);
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--superficie-borda, rgba(255, 255, 255, 0.1));
+  font-weight: 600;
+}
+
+.tabelaMetricas td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--superficie-borda, rgba(255, 255, 255, 0.05));
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.tabelaMetricas tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.badgeFormula {
+  font-family: monospace;
+  font-size: 12px;
+  background: rgba(203, 165, 86, 0.12);
+  color: #e5c175;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(203, 165, 86, 0.2);
+  display: inline-block;
+}
+
+.caixaIA {
+  background: linear-gradient(135deg, rgba(203, 165, 86, 0.08) 0%, rgba(30, 36, 48, 0.6) 100%);
+  border: 1px solid rgba(203, 165, 86, 0.25);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.itemDestaque {
+  margin-bottom: 16px;
+}
+
+.itemDestaque h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemDestaque p {
+  font-size: 14px;
+  color: var(--texto-secundario, #a0aec0);
+  line-height: 1.6;
+}

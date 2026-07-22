@@ -31,14 +31,17 @@ export async function resolverAcesso(
   idBitrix: number,
   nome: string,
 ): Promise<SessaoUsuario | null> {
-  // Dev sem sync configurado: libera acesso a todos os monitorados sem tocar no
-  // Bitrix (que retornaria 401 sem token). Pareado com o snapshot mock.
-  if (modoMockDevAtivo()) {
+  const syncApiUrl = import.meta.env.VITE_SYNC_API_URL?.trim()
+
+  // Se estiver em modo dev mock OU se o serviço de sync (Worker) estiver ativo,
+  // não faz requisições diretas do navegador para os webhooks do Bitrix (que tomam CORS).
+  if (modoMockDevAtivo() || Boolean(syncApiUrl)) {
     return {
-      colaborador: { id: idBitrix || 0, nome: nome || 'Desenvolvedor (mock)', ativo: true },
+      colaborador: { id: idBitrix || 0, nome: nome || 'Painel de inteligência', ativo: true },
       projetosPermitidos: projetosMonitoradosMock(),
     }
   }
+
 
   if (bx24Disponivel()) {
     const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.user.groups')
@@ -66,15 +69,21 @@ export async function resolverAcesso(
 
 /** Nomes de todos os grupos monitorados (via `sonet_group.get`, sem depender de sessão). */
 async function gruposMonitoradosViaWebhook(): Promise<Projeto[]> {
-  const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.get', {
-    FILTER: { ID: GRUPOS_MONITORADOS },
-  })
-  const nomePorId = new Map<number, string>()
-  grupos.forEach((g) => {
-    const id = Number(g.ID ?? g.GROUP_ID)
-    const nome = g.NAME ?? g.GROUP_NAME
-    if (Number.isFinite(id) && nome) nomePorId.set(id, nome)
-  })
+  try {
+    const grupos = await listarTodasPaginas<GrupoBitrix>('sonet_group.get', {
+      FILTER: { ID: GRUPOS_MONITORADOS },
+    })
+    const nomePorId = new Map<number, string>()
+    grupos.forEach((g) => {
+      const id = Number(g.ID ?? g.GROUP_ID)
+      const nome = g.NAME ?? g.GROUP_NAME
+      if (Number.isFinite(id) && nome) nomePorId.set(id, nome)
+    })
 
-  return GRUPOS_MONITORADOS.map((id) => ({ id, nome: nomePorId.get(id) ?? `Projeto ${id}` }))
+    return GRUPOS_MONITORADOS.map((id) => ({ id, nome: nomePorId.get(id) ?? `Grupo ${id}` }))
+  } catch (err) {
+    console.warn('Busca de grupos no Bitrix via navegador ignorada (CORS/rede), utilizando grupos monitorados nativos:', err)
+    return GRUPOS_MONITORADOS.map((id) => ({ id, nome: `Grupo ${id}` }))
+  }
 }
+

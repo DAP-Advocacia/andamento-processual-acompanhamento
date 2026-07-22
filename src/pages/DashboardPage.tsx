@@ -1,11 +1,13 @@
-import { Center, Loader, Stack, Title } from '@mantine/core'
+import { Button, Center, Group, Loader, Stack, Title } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { EstadoVazio } from '../components/EstadoVazio'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { AiAssistantChat } from '../components/dashboard/AiAssistantChat'
 import { DebugBitrixPanel } from '../components/dashboard/DebugBitrixPanel'
 import { FiltrosPainel } from '../components/dashboard/FiltrosPainel'
 import { GraficosInteligencia } from '../components/dashboard/GraficosInteligencia'
 import { MetricasCards } from '../components/dashboard/MetricasCards'
+import { VersaoModal } from '../components/dashboard/VersaoModal'
 import { useSessaoUsuario } from '../hooks/useSessaoUsuario'
 import {
   obterMetricasFiltradas,
@@ -30,6 +32,7 @@ export function DashboardPage() {
   const [pacotes, setPacotes] = useState<PacoteAtendimento[] | null>(null)
   const [erroDados, setErroDados] = useState<string | null>(null)
   const [carregandoFiltro, setCarregandoFiltro] = useState(false)
+  const [modalVersaoAberto, setModalVersaoAberto] = useState<boolean | undefined>(undefined)
 
   useEffect(() => {
     if (estado !== 'ok') return
@@ -93,7 +96,28 @@ export function DashboardPage() {
     conteudo = (
       <div className={classes.conteudo}>
         <Stack gap="xl">
-          {colaborador && <Title order={2}>Olá, {colaborador.nome}</Title>}
+          <Group justify="space-between" align="center">
+            {colaborador && <Title order={2}>Olá, {colaborador.nome}</Title>}
+            <Button
+              variant="subtle"
+              color="yellow"
+              size="xs"
+              style={{
+                borderRadius: '16px',
+                border: '1px solid rgba(203, 165, 86, 0.4)',
+                backgroundColor: 'rgba(203, 165, 86, 0.1)',
+                color: '#cba556',
+                fontWeight: 600,
+              }}
+              onClick={() => setModalVersaoAberto(true)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+              </svg>
+              Novidades v0.0.1
+            </Button>
+
+          </Group>
 
           {erroDados ? (
             <EstadoVazio titulo="Não foi possível carregar os dados" descricao={erroDados} />
@@ -131,8 +155,12 @@ export function DashboardPage() {
       {carregandoFiltro && <div className={classes.loadingBar} />}
       <ThemeToggle />
       {conteudo}
+      <VersaoModal
+        abertoManual={modalVersaoAberto}
+        onCloseManual={() => setModalVersaoAberto(false)}
+      />
+      <AiAssistantChat metricas={metricas} pacotes={pacotes} filtros={filtros} />
       <DebugBitrixPanel />
     </div>
   )
 }
-
