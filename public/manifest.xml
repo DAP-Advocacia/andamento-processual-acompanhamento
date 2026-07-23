@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <app id="dashboard.andamento.processual">
+    <name>Dashboard de Andamento Processual</name>
+    <description>Painel de inteligência de atendimento com análise de tarefas, métricas por equipe e tendências</description>
+    <icon>favicon.svg</icon>
+    <version>0.0.1</version>
+    <url>/index.html</url>
+    <options>
+      <option id="title">Dashboard de Andamento Processual</option>
+    </options>
+    <permissions>
+      <permission id="user_access">Qualquer usuário pode acessar</permission>
+    </permissions>
+  </app>
+</manifest>
