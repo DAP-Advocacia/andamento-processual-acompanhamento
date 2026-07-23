@@ -33,11 +33,11 @@ export async function resolverAcesso(
 ): Promise<SessaoUsuario | null> {
   const syncApiUrl = import.meta.env.VITE_SYNC_API_URL?.trim()
 
-  // Se estiver em modo dev mock OU se o serviço de sync (Worker) estiver ativo,
+  // Se estiver em modo dev (npm run dev) OU se o serviço de sync (Worker) estiver ativo,
   // não faz requisições diretas do navegador para os webhooks do Bitrix (que tomam CORS).
-  if (modoMockDevAtivo() || Boolean(syncApiUrl)) {
+  if (import.meta.env.DEV || modoMockDevAtivo() || Boolean(syncApiUrl)) {
     return {
-      colaborador: { id: idBitrix || 0, nome: nome || 'Painel de inteligência', ativo: true },
+      colaborador: { id: idBitrix || 0, nome: nome || 'Painel de Inteligência (Modo Mock)', ativo: true },
       projetosPermitidos: projetosMonitoradosMock(),
     }
   }

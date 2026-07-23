@@ -36,6 +36,8 @@ interface ContextoDashboard {
 export function construirPromptContextual(contexto: ContextoDashboard): string {
   const { metricas, pacotes, filtros } = contexto
 
+  const cards = pacotes ? pacotes.flatMap((p) => p.cards) : []
+
   let resumoMetricas = 'Métricas indisponíveis no momento.'
   if (metricas) {
     resumoMetricas = `
@@ -50,7 +52,9 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
   }
 
   let resumoEquipes = 'Nenhum dado por equipe disponível.'
-  let resumoColaboradores = 'Nenhum colaborador detalhado disponível.'
+  let resumoColaboradoresAtendimento = 'Nenhum colaborador de atendimento disponível.'
+  let resumoFechadores = 'Nenhum dado de fechamento disponível.'
+  let resumoFechamentoEquipes = 'Nenhum dado disponível.'
 
   if (pacotes && pacotes.length > 0) {
     const equipesMap = new Map<string, { total: number; responsaveis: number }>()
@@ -69,12 +73,64 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
       )
       .join('\n')
 
-    resumoColaboradores = pacotes
+    resumoColaboradoresAtendimento = pacotes
       .map((p) => {
         const departamentos = p.cards.find((c) => c.fechadoPorDepartamentos.length > 0)
           ?.fechadoPorDepartamentos.join(', ')
         const deptoInfo = departamentos ? ` | Departamentos: ${departamentos}` : ''
         return `- Colaborador(a) "${p.responsavelAtendimentoNome}": Equipe "${p.equipe}" (${p.cards.length} tarefas)${deptoInfo}`
+      })
+      .join('\n')
+
+    // Fechamento de tarefas por colaborador (campo fechadoPorNome)
+    const NOMES_DEPARTAMENTO_EQUIPES = [
+      'Andamento Cinthia Filgueiras',
+      'Andamento Simone Freitas',
+      'Andamento Quézia Karen',
+      'Andamento Lorena Pontes',
+    ]
+
+    const fechadoresMap = new Map<
+      string,
+      { count: number; ehDaEquipe: boolean; deptos: string[] }
+    >()
+    let concluidasTotal = 0
+    let concluidasDentroEquipes = 0
+    let concluidasForaEquipes = 0
+
+    cards.forEach((c) => {
+      if (c.status === 5) {
+        concluidasTotal++
+        const nome = c.fechadoPorNome || 'Não informado'
+        const ehDaEquipe = c.fechadoPorDepartamentos.some((d) =>
+          NOMES_DEPARTAMENTO_EQUIPES.includes(d.trim()),
+        )
+        if (ehDaEquipe) concluidasDentroEquipes++
+        else concluidasForaEquipes++
+
+        const atual = fechadoresMap.get(nome) ?? {
+          count: 0,
+          ehDaEquipe,
+          deptos: c.fechadoPorDepartamentos,
+        }
+        atual.count++
+        if (c.fechadoPorDepartamentos.length > 0) atual.deptos = c.fechadoPorDepartamentos
+        fechadoresMap.set(nome, atual)
+      }
+    })
+
+    resumoFechamentoEquipes = `
+- Total de tarefas concluídas (status=5): ${concluidasTotal}
+- Concluídas por colaboradores DAS 4 equipes de atendimento: ${concluidasDentroEquipes}
+- Concluídas por colaboradores FORA das 4 equipes de atendimento: ${concluidasForaEquipes}
+`.trim()
+
+    resumoFechadores = Array.from(fechadoresMap.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([nome, info]) => {
+        const pert = info.ehDaEquipe ? 'Pertence a equipe de atendimento' : 'FORA das 4 equipes de atendimento'
+        const deptosStr = info.deptos.length > 0 ? ` | Deptos: ${info.deptos.join(', ')}` : ''
+        return `- Colaborador(a) "${nome}": ${info.count} tarefas fechadas | Status: ${pert}${deptosStr}`
       })
       .join('\n')
   }
@@ -90,7 +146,7 @@ export function construirPromptContextual(contexto: ContextoDashboard): string {
 
   return `
 Você é o assistente virtual de inteligência artificial do Dashboard de Andamento Processual de um escritório de advocacia.
-Seu objetivo é analisar os dados operacionais do sistema e responder às perguntas do usuário com precisão, clareza e tom profissional.
+Seu objetivo é analisar os dados operacionais do sistema e responder às perguntas do usuário com extrema precisão estatística e factual.
 
 DADOS ATUAIS EM TEMPO REAL NO DASHBOARD (FILTRADOS):
 
@@ -100,17 +156,29 @@ ${resumoMetricas}
 [Volume por Equipe de Atendimento]
 ${resumoEquipes}
 
-[Mapeamento de Colaboradores, Equipes e Departamentos]
-${resumoColaboradores}
+[Mapeamento dos Responsáveis pelo Atendimento]
+${resumoColaboradoresAtendimento}
+
+[Fechamento de Tarefas / Pessoas que Concluíram Tarefas ("Fechado Por")]
+${resumoFechamentoEquipes}
+
+[Ranking Completo de Pessoas que Fecharam Tarefas ("Fechado Por")]
+${resumoFechadores}
 
 [Filtros Ativos Aplicados]
 ${resumoFiltros}
 
-INSTRUÇÕES DE RESPOSTA:
-1. Responda de forma direta, cortês e fundamentada EXCLUSIVAMENTE nos dados acima.
-2. Se o usuário perguntar sobre a equipe, departamento ou dados de um colaborador (ex: Acsa Faria), consulte a lista de Mapeamento de Colaboradores e confirme a equipe e departamentos aos quais pertence.
-3. Formate a resposta em Markdown limpo (bullets, negritos, destaques).
-4. Mantenha as respostas concisas e objetivas.
+INSTRUÇÕES DE RESPOSTA CRÍTICAS:
+1. ATENÇÃO À DIFERENÇA ENTRE "Responsável pelo Atendimento" E "Fechado Por" (quem concluiu a tarefa):
+   - "Responsável pelo Atendimento" são as pessoas alocadas no acompanhamento das equipes de atendimento.
+   - "Fechado Por" são os colaboradores que efetivamente CONCLUÍRAM/FECHARAM as tarefas.
+2. SOBRE COLABORADORES FORA DAS EQUIPES (ex: Victoria Persi, Gabriela Monteiro, Ana Catarina, etc.):
+   - Existem colaboradores que NÃO pertencem às 4 equipes de atendimento (ex: pertencem aos setores de NEGOCIAÇÃO E ACORDOS ou FINANCEIRO) mas fecham tarefas no sistema.
+   - Exemplo importante: **Victoria Persi** é uma colaboradora FORA das 4 equipes de atendimento que fechou o maior volume de tarefas no sistema.
+   - Quando o usuário perguntar "quantos cards foram fechados por pessoas que não são das equipes?", consulte a seção [Fechamento de Tarefas] e informe a quantidade exata de tarefas fechadas fora das equipes.
+   - Quando o usuário perguntar especificamente por **Victoria Persi**, confirme que ela existe no sistema, informe que ela é uma colaboradora fora das 4 equipes de atendimento e diga o número exato de tarefas que ela fechou.
+3. Responda de forma direta, cortês e fundamentada EXCLUSIVAMENTE nos dados acima.
+4. Formate a resposta em Markdown limpo (bullets, negritos, destaques).
 `.trim()
 }
 

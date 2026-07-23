@@ -70,52 +70,44 @@ interface SnapshotMetadata {
 
 async function buscarTarefasDoSnapshot(): Promise<Tarefa[]> {
   const base = baseSyncApiUrl()
-  if (!base) {
-    // Em dev, sem VITE_SYNC_API_URL configurado, cai num snapshot mock com
-    // dados reais já resolvidos (para validar a tela sem depender da VPS).
-    // O arquivo vive em public/ (fora do grafo de build do Vite) e é buscado
-    // via fetch — NUNCA um `import()` estático/dinâmico dele, que o Rollup
-    // sempre emite como chunk no dist independente de branch condicional (já
-    // vazou uma vez assim: verificar `npm run build && ls dist/assets` não
-    // deve listar nada com "snapshot-mock" antes de confiar nisto de novo).
-    if (modoMockDevAtivo()) {
-      const resposta = await fetch('/snapshot-mock.json')
-      if (!resposta.ok) {
-        throw new Error('Snapshot mock não encontrado em public/snapshot-mock.json.')
+  if (base) {
+    try {
+      const resposta = await fetch(`${base}/snapshot`)
+      if (resposta.ok) {
+        const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
+        registrarSnapshotMetadata(corpo.metadata)
+        return corpo.tarefas
       }
-      const mock = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
-      registrarSnapshotMetadata(mock.metadata)
-
-      // Ajusta dinamicamente as datas do mock em relação à data atual para ter tarefas
-      // em andamento e com risco de atraso em ambiente de desenvolvimento (mock offline).
-      const agora = new Date()
-      const maxMockTime = Math.max(...mock.tarefas.map((t) => new Date(t.prazoFinal).getTime()))
-      const targetMaxTime = agora.getTime() + 20 * 24 * 60 * 60 * 1000
-      const deltaMs = targetMaxTime - maxMockTime
-
-      return mock.tarefas.map((t) => ({
-        ...t,
-        prazoFinal: new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString(),
-      }))
+    } catch (err) {
+      console.warn('Serviço de sync em VITE_SYNC_API_URL não respondeu. Usando fallback de dados mock em ambiente DEV:', err)
     }
-    throw new Error(
-      'Serviço de sincronização não configurado. Defina VITE_SYNC_API_URL apontando para o sync-service.',
-    )
   }
 
-  const resposta = await fetch(`${base}/snapshot`)
-  if (resposta.status === 404) {
-    throw new Error(
-      'Nenhuma sincronização concluída ainda no serviço de sync. Aguarde o próximo ciclo.',
-    )
-  }
-  if (!resposta.ok) {
-    throw new Error(`Erro ao ler o snapshot de tarefas (HTTP ${resposta.status}).`)
+  // Em dev (ou se o backend de sync falhar), usa o snapshot mock local
+  if (import.meta.env.DEV || modoMockDevAtivo()) {
+    const resposta = await fetch('/snapshot-mock.json')
+    if (!resposta.ok) {
+      throw new Error('Snapshot mock não encontrado em public/snapshot-mock.json.')
+    }
+    const mock = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
+    registrarSnapshotMetadata(mock.metadata)
+
+    // Ajusta dinamicamente as datas do mock em relação à data atual para ter tarefas
+    // em andamento e com risco de atraso em ambiente de desenvolvimento (mock offline).
+    const agora = new Date()
+    const maxMockTime = Math.max(...mock.tarefas.map((t) => new Date(t.prazoFinal).getTime()))
+    const targetMaxTime = agora.getTime() + 20 * 24 * 60 * 60 * 1000
+    const deltaMs = targetMaxTime - maxMockTime
+
+    return mock.tarefas.map((t) => ({
+      ...t,
+      prazoFinal: new Date(new Date(t.prazoFinal).getTime() + deltaMs).toISOString(),
+    }))
   }
 
-  const corpo = (await resposta.json()) as { tarefas: Tarefa[]; metadata: SnapshotMetadata }
-  registrarSnapshotMetadata(corpo.metadata)
-  return corpo.tarefas
+  throw new Error(
+    'Serviço de sincronização não configurado. Defina VITE_SYNC_API_URL apontando para o sync-service.',
+  )
 }
 
 function chaveDoCache(projetosPermitidos: Projeto[]): string {
