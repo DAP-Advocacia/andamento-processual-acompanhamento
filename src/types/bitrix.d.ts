@@ -23,6 +23,9 @@ interface Bitrix24Sdk {
     callback: (results: Bitrix24Result[]) => void,
     bShowAjax?: boolean,
   ): void
+  /** Finaliza instalação do app — marca como 100% instalado. Deve ser chamado
+   * na página de instalação (quando a configuração inicial for concluída). */
+  installFinish(): void
 }
 
 declare global {

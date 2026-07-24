@@ -5,6 +5,7 @@
 import { Navigate, Route, HashRouter as Router, Routes } from 'react-router-dom'
 import { ChangelogsPage } from './pages/ChangelogsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { InstallationPage } from './pages/InstallationPage'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/changelogs" element={<ChangelogsPage />} />
+        <Route path="/install" element={<InstallationPage />} />
       </Routes>
     </Router>
   )
